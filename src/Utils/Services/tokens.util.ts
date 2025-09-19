@@ -3,7 +3,7 @@ import { ITokenPayload } from "../../Common/Interfaces";
 
 // Generate
 export const generateToken = (
-  payload: ITokenPayload,
+  payload: ITokenPayload | Buffer | object,
   secret: string,
   options: SignOptions
 ) => {
@@ -11,6 +11,6 @@ export const generateToken = (
 };
 
 // Verify
-export const verifyToken = (token: string, secret: string) => {
-  return jwt.verify(token, secret);
+export const verifyToken = (token: string, secret: string): ITokenPayload => {
+  return jwt.verify(token, secret) as ITokenPayload;
 };

@@ -5,6 +5,9 @@
     "start": "node dist/index.js"
   },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.890.0",
+    "@aws-sdk/lib-storage": "^3.892.0",
+    "@aws-sdk/s3-request-presigner": "^3.890.0",
     "@types/bcrypt": "^6.0.0",
     "@types/express": "^5.0.3",
     "bcrypt": "^6.0.0",
@@ -12,12 +15,14 @@
     "express": "^5.1.0",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.18.1",
+    "multer": "^2.0.2",
     "nanoid": "^5.1.5",
     "nodemailer": "^7.0.6",
     "uuid": "^13.0.0"
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.10",
+    "@types/multer": "^2.0.0",
     "@types/node": "^24.4.0",
     "@types/nodemailer": "^7.0.1",
     "ts-node": "^10.9.2",

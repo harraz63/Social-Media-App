@@ -1,5 +1,7 @@
 import { Document, Types } from "mongoose";
 import { GenderEnum, OtpTypesEnum, ProviderEnum, RoleEnum } from "../Enums";
+import { Request } from "express";
+import { JwtPayload } from "jsonwebtoken";
 
 export interface IUser extends Document {
   _id: Types.ObjectId;
@@ -35,8 +37,18 @@ export interface IOTP {
 }
 
 export interface ITokenPayload {
-  userId: string;
+  _id: string;
   role: RoleEnum;
   email: string;
   isVerified?: boolean;
+  jti?: boolean;
+}
+
+export interface IRequest extends Request {
+  loggedInUser: { user: IUser; token: JwtPayload };
+}
+
+export interface IBlackListedToken extends Document {
+  tokenId: string;
+  expiresAt: Date;
 }

@@ -1,23 +1,29 @@
 import { NextFunction, Request, Response } from "express";
-import { IOTP, IUser } from "../../../Common/Interfaces";
+import { IOTP, IRequest, IUser } from "../../../Common/Interfaces";
 import { UserRepository } from "../../../DB/Repositories/user.repository";
-import { UserModel } from "../../../DB/Models";
+import { BlackListedTokenModel, UserModel } from "../../../DB/Models";
 import {
   compareHash,
   emmiter,
   encrypt,
   generateHash,
   generateToken,
+  verifyToken,
 } from "../../../Utils";
 import { customAlphabet } from "nanoid";
 import { OtpTypesEnum } from "../../../Common/Enums";
 import { SignOptions } from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
+import { BlackListedTokenRepository } from "../../../DB/Repositories";
+import { SuccessResponse } from "../../../Utils/Response/response-helper.utils";
+import { BadRequestException } from "../../../Utils/Errors/exceptions.utils";
 
 const uniqueString = customAlphabet("0123456789", 5);
 
 class AuthService {
   private userRepo: UserRepository = new UserRepository(UserModel);
+  private blackListedRepo: BlackListedTokenRepository =
+    new BlackListedTokenRepository(BlackListedTokenModel);
 
   signup = async (req: Request, res: Response, next: NextFunction) => {
     const {
@@ -106,18 +112,11 @@ class AuthService {
       OTPS: [confermitionEmailOtp],
     });
 
-    return res.status(201).json({
-      success: true,
-      message: "User Signed Up Successfully",
-      data: {
-        firstName,
-        lastName,
-        email,
-        gender,
-        DOB,
-        age,
-      },
-    });
+    return res
+      .status(201)
+      .json(
+        SuccessResponse<IUser>("User Signed Up Successfully", 201, newUser)
+      );
   };
 
   signin = async (req: Request, res: Response, next: NextFunction) => {
@@ -149,7 +148,7 @@ class AuthService {
     // Generate Access And Refresh Tokens
     const accessToken = generateToken(
       {
-        userId: user._id.toString(),
+        _id: user._id.toString(),
         role: user.role,
         email: user.email,
         isVerified: user.isVerified,
@@ -163,7 +162,7 @@ class AuthService {
     );
     const refreshToken = generateToken(
       {
-        userId: user._id.toString(),
+        _id: user._id.toString(),
         role: user.role,
         email: user.email,
         isVerified: user.isVerified,
@@ -224,6 +223,79 @@ class AuthService {
     return res
       .status(200)
       .json({ success: true, message: "Account Confirmed Successfully" });
+  };
+
+  logout = async (req: Request, res: Response, next: NextFunction) => {
+    const {
+      token: { jti: accessTokenId, exp: accessTokenExp },
+    } = (req as IRequest).loggedInUser;
+
+    const { jti: refreshTokenId, exp: refreshTokenExp } = (req as any)
+      .refreshToken;
+
+    // Revoke Access Token
+    const blackListedAccessToken = await this.blackListedRepo.createNewDocument(
+      {
+        tokenId: accessTokenId,
+        expiresAt: new Date(accessTokenExp || Date.now() + 600000),
+      }
+    );
+
+    // Revoke Refresh Token
+    const blackListedRefreshToken =
+      await this.blackListedRepo.createNewDocument({
+        tokenId: refreshTokenId,
+        expiresAt: new Date(refreshTokenExp || Date.now() + 600000),
+      });
+
+    return res.status(200).json({
+      success: true,
+      message: "User Logged Out Successfully",
+      data: { blackListedAccessToken, blackListedRefreshToken },
+    });
+  };
+
+  refreshToken = async (req: Request, res: Response) => {
+    const decodedData = (req as any).refreshToken;
+
+    // Create New Access Token
+    const accessToken = generateToken(
+      {
+        _id: decodedData._id,
+        role: decodedData.role,
+        email: decodedData.email,
+        isVerified: decodedData.isVerified,
+      },
+      process.env.JWT_ACCESS_SECRET as string,
+      {
+        jwtid: uuidv4(),
+        expiresIn: process.env
+          .JWT_ACCESS_EXPIRES_IN as SignOptions["expiresIn"],
+      }
+    );
+
+    // Create New Refresh Token (rotation)
+    const newRefreshToken = generateToken(
+      {
+        _id: decodedData._id,
+        role: decodedData.role,
+        email: decodedData.email,
+        isVerified: decodedData.isVerified,
+      },
+      process.env.JWT_REFRESH_SECRET as string,
+      {
+        jwtid: uuidv4(),
+        expiresIn: process.env
+          .JWT_REFRESH_EXPIRES_IN as SignOptions["expiresIn"],
+      }
+    );
+
+    res.json(
+      SuccessResponse("Access Token Refreshed Successfully", 200, {
+        accessToken,
+        refreshToken: newRefreshToken,
+      })
+    );
   };
 }
 
