@@ -1,4 +1,4 @@
-import { Document, Types } from "mongoose";
+import mongoose, { Document, Types } from "mongoose";
 import { GenderEnum, OtpTypesEnum, ProviderEnum, RoleEnum } from "../Enums";
 import { Request } from "express";
 import { JwtPayload } from "jsonwebtoken";
@@ -31,9 +31,10 @@ export interface IEmailArgument {
 }
 
 export interface IOTP {
+  userId: mongoose.Types.ObjectId;
   value: string;
-  expiresAt: Date;
   otpType: OtpTypesEnum;
+  expiresAt: Date;
 }
 
 export interface ITokenPayload {

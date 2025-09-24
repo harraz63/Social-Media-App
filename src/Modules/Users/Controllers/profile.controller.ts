@@ -1,9 +1,8 @@
 import express from "express";
 import { authentication, Multer } from "../../../Middlewares";
 import profileService from "../Services/profile.service";
-// import * as Services from "./Services/user.service";
 
-const profileController = express();
+const profileController = express.Router();
 
 // Upload Profile Picture
 profileController.post(

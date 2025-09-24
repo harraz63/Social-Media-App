@@ -1,14 +1,22 @@
-import mongoose, {
+import mongoose from "mongoose";
+import {
   FilterQuery,
+  HydratedDocument,
   Model,
   ProjectionType,
   QueryOptions,
+  UpdateQuery,
+  DeleteResult,
+  UpdateResult,
+  MongooseBaseQueryOptions,
+  MongooseUpdateQueryOptions,
+  AnyObject,
 } from "mongoose";
 
 export abstract class BaseRepository<T> {
   constructor(private model: Model<T>) {}
 
-  async createNewDocument(document: Partial<T>): Promise<T> {
+  async createNewDocument(document: Partial<T>): Promise<HydratedDocument<T>> {
     return await this.model.create(document);
   }
 
@@ -16,7 +24,7 @@ export abstract class BaseRepository<T> {
     filters: FilterQuery<T>,
     projection?: ProjectionType<T>,
     options?: QueryOptions<T>
-  ): Promise<T | null> {
+  ): Promise<HydratedDocument<T> | null> {
     return await this.model.findOne(filters, projection, options);
   }
 
@@ -24,23 +32,77 @@ export abstract class BaseRepository<T> {
     id: mongoose.Types.ObjectId | string,
     projection?: ProjectionType<T>,
     options?: QueryOptions<T>
-  ): Promise<T | null> {
+  ): Promise<HydratedDocument<T> | null> {
     return await this.model.findById(id, projection, options);
   }
 
-  async deleteByIdDocument(id: mongoose.Types.ObjectId) {
+  async deleteByIdDocument(
+    id: mongoose.Types.ObjectId | string
+  ): Promise<HydratedDocument<T> | null> {
     return await this.model.findByIdAndDelete(id);
   }
 
-  updateOneDocument() {}
+  async deleteOneDocument(
+    filters: FilterQuery<T>,
+    options?: (MongooseBaseQueryOptions<T> & AnyObject) | null
+  ): Promise<DeleteResult> {
+    return await this.model.deleteOne(filters, options);
+  }
 
-  deleteOneDocument() {}
+  async deleteMultipleDocuments(
+    filters: FilterQuery<T>,
+    options?: (MongooseBaseQueryOptions<T> & AnyObject) | null
+  ): Promise<DeleteResult> {
+    return await this.model.deleteMany(filters, options);
+  }
 
-  deleteMultipleDocuments() {}
+  async updateOneDocument(
+    filters: FilterQuery<T>,
+    update: UpdateQuery<T>,
+    options?: QueryOptions<T>
+  ): Promise<HydratedDocument<T> | null> {
+    return await this.model.findOneAndUpdate(filters, update, options);
+  }
 
-  findAndUpdateDocument() {}
+  async updateManyDocuments(
+    filters: FilterQuery<T>,
+    update: UpdateQuery<T>,
+    options?: MongooseUpdateQueryOptions<T>
+  ): Promise<UpdateResult> {
+    return await this.model.updateMany(filters, update, options);
+  }
 
-  findAndDeleteDocument() {}
+  // ✅ findByIdAndUpdateDocument
+  async findByIdAndUpdateDocument(
+    id: mongoose.Types.ObjectId | string,
+    update: UpdateQuery<T>,
+    options?: QueryOptions<T>
+  ): Promise<HydratedDocument<T> | null> {
+    return await this.model.findByIdAndUpdate(id, update, options);
+  }
 
-  findDocuments() {}
+  // ✅ findAndDeleteDocument
+  async findAndDeleteDocument(
+    filters: FilterQuery<T>,
+    options?: QueryOptions<T>
+  ): Promise<HydratedDocument<T> | null> {
+    return await this.model.findOneAndDelete(filters, options);
+  }
+
+  // ✅ findByIdAndDeleteDocument
+  async findByIdAndDeleteDocument(
+    id: mongoose.Types.ObjectId | string,
+    options?: QueryOptions<T>
+  ): Promise<HydratedDocument<T> | null> {
+    return await this.model.findByIdAndDelete(id, options);
+  }
+
+  // ✅ findDocuments (multiple find)
+  async findDocuments(
+    filters: FilterQuery<T>,
+    projection?: ProjectionType<T>,
+    options?: QueryOptions<T>
+  ): Promise<HydratedDocument<T>[]> {
+    return await this.model.find(filters, projection, options);
+  }
 }

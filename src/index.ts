@@ -4,11 +4,15 @@ import * as controllers from "./Modules/controllers.index";
 import dbConnection from "./DB/db.connection";
 import { HttpException } from "./Utils";
 import { FailedResponse } from "./Utils/Response/response-helper.utils";
+import { syncCommentsCounterJob } from "./Jobs";
 
 const app = express();
 app.use(express.json());
 
 dbConnection();
+
+// Run cron jobs
+syncCommentsCounterJob();
 
 app.use("/api/auth", controllers.authController);
 app.use("/api/users", controllers.profileController);

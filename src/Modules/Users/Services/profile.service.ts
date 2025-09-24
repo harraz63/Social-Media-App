@@ -5,7 +5,6 @@ import { IRequest } from "../../../Common/Interfaces";
 import { SuccessResponse } from "../../../Utils/Response/response-helper.utils";
 import { UserRepository } from "../../../DB/Repositories";
 import { UserModel } from "../../../DB/Models";
-import mongoose from "mongoose";
 
 export class ProfileService {
   private s3Client = new S3ClientService();

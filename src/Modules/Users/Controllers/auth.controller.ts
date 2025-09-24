@@ -2,7 +2,7 @@ import express from "express";
 import AuthService from "../Services/auth.service";
 import { authentication, verifyRefreshToken } from "../../../Middlewares";
 
-const authController = express();
+const authController = express.Router();
 
 // Signup
 authController.post("/signup", AuthService.signup);

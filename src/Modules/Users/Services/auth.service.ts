@@ -16,7 +16,7 @@ import { SignOptions } from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
 import { BlackListedTokenRepository } from "../../../DB/Repositories";
 import { SuccessResponse } from "../../../Utils/Response/response-helper.utils";
-import { BadRequestException } from "../../../Utils/Errors/exceptions.utils";
+import { OtpModel } from "../../../DB/Models/otp.model";
 
 const uniqueString = customAlphabet("0123456789", 5);
 
@@ -56,6 +56,18 @@ class AuthService {
     const encryptedPhoneNumber = encrypt(phoneNumber as string);
     const hashedPassword = generateHash(password as string);
 
+    // Create New User
+    const newUser = await this.userRepo.createNewDocument({
+      firstName,
+      lastName,
+      password: hashedPassword,
+      email,
+      gender,
+      DOB,
+      age,
+      phoneNumber: encryptedPhoneNumber,
+    });
+
     // OTP Logic And Sending Confirmation Email
     const otp = uniqueString();
     emmiter.emit("sendEmail", {
@@ -94,23 +106,12 @@ class AuthService {
     });
 
     const confermitionEmailOtp: IOTP = {
+      userId: newUser._id,
       value: generateHash(otp),
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
       otpType: OtpTypesEnum.EMAIL_VERIFICATION,
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
     };
-
-    // Create New User
-    const newUser = await this.userRepo.createNewDocument({
-      firstName,
-      lastName,
-      password: hashedPassword,
-      email,
-      gender,
-      DOB,
-      age,
-      phoneNumber: encryptedPhoneNumber,
-      OTPS: [confermitionEmailOtp],
-    });
+    await OtpModel.create(confermitionEmailOtp);
 
     return res
       .status(201)
@@ -185,13 +186,14 @@ class AuthService {
 
   confirmEmail = async (req: Request, res: Response, next: NextFunction) => {
     const { email, otp } = req.body;
+
     if (!email || !otp) {
       return res
         .status(400)
         .json({ success: false, message: "Email and OTP are required" });
     }
 
-    // Validate On Otp
+    // Find the user by email
     const user = await this.userRepo.findUserByEmail(email);
     if (!user) {
       return res
@@ -199,26 +201,36 @@ class AuthService {
         .json({ success: false, message: "Email Not Found" });
     }
 
-    // Check If User Have Not OTP
-    if (!user.OTPS.length) {
+    // Find the latest OTP for this user with type EMAIL_VERIFICATION
+    const otpDoc = await OtpModel.findOne({
+      userId: user._id,
+      otpType: OtpTypesEnum.EMAIL_VERIFICATION,
+    }).sort({ createdAt: -1 });
+
+    if (!otpDoc) {
       return res.status(400).json({ success: false, message: "No OTP found" });
     }
 
-    // Compare OTPS
-    const userOtp = user.OTPS[user.OTPS.length - 1];
-    // Check If OTP Is Expired
-    if (userOtp.expiresAt < new Date()) {
+    // Check if the OTP is expired
+    if (otpDoc.expiresAt < new Date()) {
       return res.status(400).json({ success: false, message: "OTP expired" });
     }
 
-    const isOtpMatches = await compareHash(otp, userOtp.value);
+    // Compare the provided OTP with the stored hashed OTP
+    const isOtpMatches = await compareHash(otp, otpDoc.value);
     if (!isOtpMatches) {
       return res.status(400).json({ success: false, message: "Invalid OTP" });
     }
 
-    user.OTPS = [];
+    // Mark the user as verified
     user.isVerified = true;
     await user.save();
+
+    // Delete all OTPs for this user and type EMAIL_VERIFICATION
+    await OtpModel.deleteMany({
+      userId: user._id,
+      otpType: OtpTypesEnum.EMAIL_VERIFICATION,
+    });
 
     return res
       .status(200)
