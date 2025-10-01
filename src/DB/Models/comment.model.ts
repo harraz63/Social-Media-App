@@ -22,21 +22,23 @@ const commentSchema = new mongoose.Schema<IComment>(
       type: mongoose.Schema.Types.ObjectId,
       ref: "Comment",
       default: null,
-      reactions: [
-        {
-          userId: {
-            type: mongoose.Schema.Types.ObjectId,
-            ref: "User",
-            required: true,
-          },
-          type: {
-            type: String,
-            enum: Object.values(ReactionEnum),
-            required: true,
-          },
-        },
-      ],
     },
+    reactions: [
+      {
+        userId: {
+          type: mongoose.Schema.Types.ObjectId,
+          ref: "User",
+          required: true,
+        },
+        type: {
+          type: String,
+          enum: Object.values(ReactionEnum),
+          required: true,
+        },
+      },
+    ],
+    repliesCounter: { type: Number, default: 0 },
+    reactionCounter: { type: Number, default: 0 },
   },
   {
     timestamps: true,

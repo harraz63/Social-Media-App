@@ -1,17 +1,15 @@
+// post.interface.ts
 import mongoose from "mongoose";
 
 export interface IPost {
   authorId: mongoose.Types.ObjectId;
   text: string;
   commentsCounter: number;
+  reactionCounter: number;
   mediaUrl?: string;
   mediaKey?: string;
-  reactions?: {
-    like: number;
-    love: number;
-    haha: number;
-    wow: number;
-    sad: number;
-    angry: number;
-  };
+  reactions: {
+    userId: mongoose.Types.ObjectId;
+    type: "like" | "love" | "haha" | "wow" | "sad" | "angry";
+  }[];
 }

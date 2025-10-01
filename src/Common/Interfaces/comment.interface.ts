@@ -5,10 +5,12 @@ export interface IComment {
   authorId: mongoose.Types.ObjectId;
   text: string;
   parentCommentId?: mongoose.Types.ObjectId | null;
-  reactions?: {
+  reactions: {
     userId: mongoose.Types.ObjectId;
     type: ReactionEnum;
   }[];
+  repliesCounter: number;
+  reactionCounter: number;
   createdAt?: Date;
   updatedAt?: Date;
 }

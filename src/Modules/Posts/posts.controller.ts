@@ -20,9 +20,9 @@ postsController.get("", PostService.getAllPosts);
 postsController.get("/:userId", authentication, PostService.getPostByUserID);
 
 // Update Own Post
-postsController.put("/:postId", authentication, PostService.updateOwnPost)
+postsController.put("/:postId", authentication, PostService.updateOwnPost);
 
 // Delete Own Post
-postsController.delete("/:postId", authentication, PostService.deleteOwnPost)
+postsController.delete("/:postId", authentication, PostService.deleteOwnPost);
 
 export { postsController };

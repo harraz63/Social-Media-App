@@ -1,7 +1,6 @@
 import { NextFunction, Request, Response } from "express";
 import { BadRequestException } from "../Utils/Errors/exceptions.utils";
 import { verifyToken } from "../Utils";
-import { IRequest } from "../Common/Interfaces";
 
 export const verifyRefreshToken = (
   req: Request,
