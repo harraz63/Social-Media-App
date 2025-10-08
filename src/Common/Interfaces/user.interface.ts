@@ -1,5 +1,11 @@
 import mongoose, { Document, Types } from "mongoose";
-import { GenderEnum, OtpTypesEnum, ProviderEnum, RoleEnum } from "../Enums";
+import {
+  FriendShipStatusEnum,
+  GenderEnum,
+  OtpTypesEnum,
+  ProviderEnum,
+  RoleEnum,
+} from "../Enums";
 import { Request } from "express";
 import { JwtPayload } from "jsonwebtoken";
 
@@ -7,7 +13,13 @@ export interface IUser extends Document {
   _id: Types.ObjectId;
   firstName: string;
   lastName: string;
+  bio: string;
   email: string;
+  twoFactorAuth: {
+    enabled: boolean;
+    otp: string;
+    otpExpiresAt: Date;
+  };
   password: string;
   role: RoleEnum;
   gender: GenderEnum;
@@ -52,4 +64,10 @@ export interface IRequest extends Request {
 export interface IBlackListedToken extends Document {
   tokenId: string;
   expiresAt: Date;
+}
+
+export interface IFriendShip extends Document {
+  requstFromId: mongoose.Types.ObjectId;
+  requstToId: mongoose.Types.ObjectId;
+  status: FriendShipStatusEnum;
 }

@@ -8,7 +8,6 @@ import {
   encrypt,
   generateHash,
   generateToken,
-  verifyToken,
 } from "../../../Utils";
 import { customAlphabet } from "nanoid";
 import { OtpTypesEnum } from "../../../Common/Enums";
@@ -35,7 +34,7 @@ class AuthService {
       DOB,
       age,
       phoneNumber,
-    }: Partial<IUser> = req.body;
+    } = req.body;
 
     // Check If Email Is Already Exist
     const isEmailExist = await this.userRepo.findOneDocument(
@@ -52,6 +51,21 @@ class AuthService {
       });
     }
 
+    // Execute The User Age
+    if (DOB) {
+      const birthDate = new Date(DOB as unknown as string);
+      const today = new Date();
+
+      let userAge = today.getFullYear() - birthDate.getFullYear();
+      const monthDiff = today.getMonth() - birthDate.getMonth();
+      if (
+        monthDiff < 0 ||
+        (monthDiff === 0 && today.getDate() < birthDate.getDate())
+      ) {
+        userAge--; // If the user's birthday hasn't occurred yet this year, subtract 1 from age
+      }
+    }
+
     // Encrypt Phone Number And Hash Password
     const encryptedPhoneNumber = encrypt(phoneNumber as string);
     const hashedPassword = generateHash(password as string);
@@ -63,7 +77,6 @@ class AuthService {
       password: hashedPassword,
       email,
       gender,
-      DOB,
       age,
       phoneNumber: encryptedPhoneNumber,
     });

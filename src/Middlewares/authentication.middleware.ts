@@ -15,16 +15,11 @@ export const authentication = async (
   res: Response,
   next: NextFunction
 ) => {
-  const { authorization: accessToken } = req.headers;
-  if (!accessToken) {
+  const { authorization: token } = req.headers;
+  if (!token) {
     return res
       .status(401)
       .json({ success: false, message: "Please Login First" });
-  }
-
-  const [prefix, token] = accessToken.split(" ");
-  if (prefix !== process.env.JWT_PREFIX) {
-    throw next(new BadRequestException("Invalid Token")) 
   }
 
   const decodedData = verifyToken(

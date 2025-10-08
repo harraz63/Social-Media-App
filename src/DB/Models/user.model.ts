@@ -14,6 +14,10 @@ const userSchema = new mongoose.Schema<IUser>(
       required: true,
       minLength: [4, "Last Name Must Be At Least 4 Characters Long"],
     },
+    bio: {
+      type: String,
+      default: "",
+    },
     email: {
       type: String,
       required: true,
@@ -29,6 +33,20 @@ const userSchema = new mongoose.Schema<IUser>(
     password: {
       type: String,
       required: true,
+    },
+    twoFactorAuth: {
+      enabled: {
+        type: Boolean,
+        default: false,
+      },
+      otp: {
+        type: String,
+        default: null,
+      },
+      otpExpiresAt: {
+        type: Date,
+        default: null,
+      },
     },
     age: {
       type: Number,
@@ -56,6 +74,7 @@ const userSchema = new mongoose.Schema<IUser>(
     googleId: String,
     phoneNumber: String,
   },
+
   {
     timestamps: true,
   }

@@ -22,5 +22,11 @@ enum OtpTypesEnum {
   PHONE_VERIFICATION = "PHONE_VERIFICATION",
 }
 
+enum FriendShipStatusEnum {
+    PENDING = "pending",
+    ACCEPTED = "accepted",
+    REJECTED = "rejected",
+}
 
-export { RoleEnum, GenderEnum, ProviderEnum, OtpTypesEnum };
+
+export { RoleEnum, GenderEnum, ProviderEnum, OtpTypesEnum, FriendShipStatusEnum };
