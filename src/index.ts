@@ -16,6 +16,7 @@ syncCommentsCounterJob();
 
 app.use("/api/auth", controllers.authController);
 app.use("/api/users", controllers.profileController);
+app.use("/api/admin", controllers.adminController);
 app.use("/api/posts", controllers.postsController);
 app.use("/api/comments", controllers.commentsController);
 app.use("/api/reacts", controllers.reactsController);

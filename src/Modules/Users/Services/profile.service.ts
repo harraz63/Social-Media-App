@@ -8,6 +8,7 @@ import {
   decrypt,
   emmiter,
   generateHash,
+  generateToken,
   S3ClientService,
 } from "../../../Utils";
 import { IFriendShip, IRequest, IUser } from "../../../Common/Interfaces";
@@ -15,8 +16,11 @@ import { SuccessResponse } from "../../../Utils/Response/response-helper.utils";
 import { FriendShipRepository, UserRepository } from "../../../DB/Repositories";
 import { UserModel } from "../../../DB/Models";
 import { FriendShipStatusEnum } from "../../../Common/Enums";
+
 import { FilterQuery } from "mongoose";
 import { customAlphabet } from "nanoid";
+import { v4 as uuidv4 } from "uuid";
+import { SignOptions } from "jsonwebtoken";
 
 const uniqueString = customAlphabet("0123456789", 5);
 
@@ -469,8 +473,41 @@ export class ProfileService {
   `,
     });
 
+    // Generate Access And Refresh Tokens
+    const accessToken = generateToken(
+      {
+        _id: user._id.toString(),
+        role: user.role,
+        email: user.email,
+        isVerified: user.isVerified,
+      },
+      process.env.JWT_ACCESS_SECRET as string,
+      {
+        jwtid: uuidv4(),
+        expiresIn: process.env
+          .JWT_ACCESS_EXPIRES_IN as SignOptions["expiresIn"],
+      }
+    );
+    const refreshToken = generateToken(
+      {
+        _id: user._id.toString(),
+        role: user.role,
+        email: user.email,
+        isVerified: user.isVerified,
+      },
+      process.env.JWT_REFRESH_SECRET as string,
+      {
+        jwtid: uuidv4(),
+        expiresIn: process.env
+          .JWT_REFRESH_EXPIRES_IN as SignOptions["expiresIn"],
+      }
+    );
+
     return res.json(
-      SuccessResponse("Two-Factor Authentication Enabled Successfully", 200)
+      SuccessResponse("Two-Factor Authentication Enabled Successfully", 200, {
+        accessToken,
+        refreshToken,
+      })
     );
   };
 }
