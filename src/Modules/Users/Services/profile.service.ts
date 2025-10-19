@@ -13,11 +13,15 @@ import {
 } from "../../../Utils";
 import { IFriendShip, IRequest, IUser } from "../../../Common/Interfaces";
 import { SuccessResponse } from "../../../Utils/Response/response-helper.utils";
-import { FriendShipRepository, UserRepository } from "../../../DB/Repositories";
-import { UserModel } from "../../../DB/Models";
+import {
+  ConversationRepository,
+  FriendShipRepository,
+  UserRepository,
+} from "../../../DB/Repositories";
+import { ConversationModel, UserModel } from "../../../DB/Models";
 import { FriendShipStatusEnum } from "../../../Common/Enums";
 
-import { FilterQuery } from "mongoose";
+import { FilterQuery, Types } from "mongoose";
 import { customAlphabet } from "nanoid";
 import { v4 as uuidv4 } from "uuid";
 import { SignOptions } from "jsonwebtoken";
@@ -28,6 +32,7 @@ export class ProfileService {
   private s3Client = new S3ClientService();
   private userRepo = new UserRepository(UserModel);
   private friendShipRepo = new FriendShipRepository();
+  private conversationRepo = new ConversationRepository(ConversationModel);
 
   uploadProfilePicture = async (req: Request, res: Response) => {
     const { file } = req;
@@ -144,8 +149,8 @@ export class ProfileService {
     if (!user) throw new BadRequestException("User Not Found");
 
     await this.friendShipRepo.createNewDocument({
-      requstFromId: userId,
-      requstToId: friendId,
+      requestFromId: userId,
+      requestToId: friendId,
     });
 
     return res.json(
@@ -164,9 +169,9 @@ export class ProfileService {
       status: status ? status : FriendShipStatusEnum.PENDING,
     };
     if (filters.status === FriendShipStatusEnum.ACCEPTED) {
-      filters.$or = [{ requstToId: userId }, { requstFromId: userId }];
+      filters.$or = [{ requestToId: userId }, { requestFromId: userId }];
     } else {
-      filters.requstToId = userId;
+      filters.requestToId = userId;
     }
 
     const frindShipRequests = await this.friendShipRepo.findDocuments(
@@ -175,23 +180,27 @@ export class ProfileService {
       {
         populate: [
           {
-            path: "requstFromId",
+            path: "requestFromId",
             select: "firstName lastName profilePicture",
           },
           {
-            path: "requstToId",
+            path: "requestToId",
             select: "firstName lastName profilePicture",
           },
         ],
       }
     );
 
+    const groups = await this.conversationRepo.findDocuments({
+      type: "group",
+      members: { $in: [userId] },
+    });
+
     return res.json(
-      SuccessResponse<IFriendShip[]>(
-        "Requests Fetched Successfully",
-        200,
-        frindShipRequests
-      )
+      SuccessResponse("Requests Fetched Successfully", 200, {
+        frindShipRequests,
+        groups,
+      })
     );
   };
 
@@ -205,7 +214,7 @@ export class ProfileService {
     // Get The Friend Ship Request
     const friendRequest = await this.friendShipRepo.findOneDocument({
       _id: friendRequestId,
-      requstToId: userId,
+      requestToId: userId,
       status: FriendShipStatusEnum.PENDING,
     });
     if (!friendRequest)
@@ -220,6 +229,32 @@ export class ProfileService {
         200,
         friendRequest
       )
+    );
+  };
+
+  // Get All Friend
+  getAllFriends = async (req: Request, res: Response) => {
+    const {
+      user: { _id: userId },
+    } = (req as IRequest).loggedInUser;
+
+    const friends = await this.friendShipRepo.getAllFriendShip(userId);
+    if (!friends) {
+      return res.json(SuccessResponse("No Friends Found", 200, []));
+    }
+
+    // Map Friends
+    const mappedFriends = friends.map((friend) => {
+      const friendData =
+        friend.requestFromId._id.toString() === userId.toString()
+          ? friend.requestToId
+          : friend.requestFromId;
+
+      return friendData;
+    });
+
+    return res.json(
+      SuccessResponse("Friends Fetched Successfully", 200, mappedFriends)
     );
   };
 
@@ -509,6 +544,39 @@ export class ProfileService {
         refreshToken,
       })
     );
+  };
+
+  // Create Group
+  createGroup = async (req: Request, res: Response) => {
+    const {
+      user: { _id: userId },
+    } = (req as IRequest).loggedInUser;
+    const { name, memberIds } = req.body;
+
+    const members = await this.userRepo.findDocuments({
+      _id: { $in: memberIds },
+    });
+
+    if (members.length !== memberIds.length)
+      throw new BadRequestException("Members Not Found");
+
+    const friendShip = await this.friendShipRepo.findDocuments({
+      $or: [
+        { requestFromId: userId, requestToId: { $in: memberIds } },
+        { requestFromId: { $in: memberIds }, requestToId: userId },
+      ],
+    });
+
+    if (friendShip.length !== memberIds.length)
+      throw new BadRequestException("Members Not Found");
+
+    const group = await this.conversationRepo.createNewDocument({
+      type: "group",
+      name,
+      members: [userId, ...memberIds],
+    });
+
+    return res.json(SuccessResponse("Group Created Successfully", 201, group));
   };
 }
 

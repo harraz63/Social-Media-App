@@ -5,8 +5,12 @@ import dbConnection from "./DB/db.connection";
 import { HttpException } from "./Utils";
 import { FailedResponse } from "./Utils/Response/response-helper.utils";
 import { syncCommentsCounterJob } from "./Jobs";
+import { ioInitializer } from "./Gateways/socketIo.gateway";
+import cors from "cors";
+
 
 const app = express();
+app.use(cors({ origin: "*", methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"] }));
 app.use(express.json());
 
 dbConnection();
@@ -47,4 +51,6 @@ app.use(
 );
 
 const port: number | string = process.env.PORT || 3000;
-app.listen(port);
+const server = app.listen(port);
+
+ioInitializer(server);

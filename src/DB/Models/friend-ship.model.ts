@@ -3,12 +3,12 @@ import { FriendShipStatusEnum } from "../../Common/Enums";
 import { IFriendShip } from "../../Common/Interfaces";
 
 const friendShipSchema = new mongoose.Schema<IFriendShip>({
-  requstFromId: {
+  requestFromId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: true,
   },
-  requstToId: {
+  requestToId: {
     type: mongoose.Schema.Types.ObjectId,
     ref: "User",
     required: true,

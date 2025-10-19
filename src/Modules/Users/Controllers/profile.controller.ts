@@ -73,6 +73,13 @@ profileController.patch(
   profileService.respondToFriendShipRequest
 );
 
+// Get All Friends
+profileController.get(
+  "/list-friends",
+  authentication,
+  profileService.getAllFriends
+);
+
 // Change Email
 profileController.put(
   "/change-email",
@@ -91,10 +98,13 @@ profileController.post(
 );
 
 // Verify 2FA
+profileController.post("/verify-2fa", authentication, profileService.verify2FA);
+
+// Create Group
 profileController.post(
-  "/verify-2fa",
+  "/create-group",
   authentication,
-  profileService.verify2FA
+  profileService.createGroup
 );
 
 export { profileController };

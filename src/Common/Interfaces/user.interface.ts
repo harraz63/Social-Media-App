@@ -67,7 +67,20 @@ export interface IBlackListedToken extends Document {
 }
 
 export interface IFriendShip extends Document {
-  requstFromId: mongoose.Types.ObjectId;
-  requstToId: mongoose.Types.ObjectId;
+  requestFromId: mongoose.Types.ObjectId;
+  requestToId: mongoose.Types.ObjectId;
   status: FriendShipStatusEnum;
+}
+
+export interface IConversation extends Document {
+  type: string;
+  name: string;
+  members: mongoose.Types.ObjectId[];
+}
+
+export interface IMessage extends Document {
+  text: string;
+  conversationId: mongoose.Types.ObjectId;
+  senderId: mongoose.Types.ObjectId;
+  attachments?: string[];
 }
