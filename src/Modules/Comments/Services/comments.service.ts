@@ -15,7 +15,7 @@ class CommentsService {
   private commentRepo = new CommentRepository(CommentModel);
 
   addComment = async (req: Request, res: Response) => {
-    const { text, parentCommentId } = req.body;
+    const { text } = req.body;
     const {
       user: { _id: userId },
     } = (req as unknown as IRequest).loggedInUser;
@@ -28,11 +28,9 @@ class CommentsService {
     // Create Commnet In DB
     const comment = await this.commentRepo.createNewDocument({
       authorId: userId,
-      postId: postId as unknown as mongoose.Types.ObjectId,
+      refId: postId as unknown as mongoose.Types.ObjectId,
+      onModel: "Post",
       text: text,
-      parentCommentId: parentCommentId
-        ? (parentCommentId as unknown as mongoose.Types.ObjectId)
-        : null,
     });
 
     // Increase Comments Counter By 1
@@ -105,7 +103,7 @@ class CommentsService {
     await comment.deleteOne();
 
     // Decrease Commnets Counter By One
-    await PostModel.findByIdAndUpdate(comment.postId, {
+    await PostModel.findByIdAndUpdate(comment.refId, {
       $inc: { commentsCounter: -1 },
     });
 

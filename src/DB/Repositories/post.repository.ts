@@ -1,6 +1,12 @@
-import mongoose, { HydratedDocument, Model } from "mongoose";
+import mongoose, {
+  FilterQuery,
+  HydratedDocument,
+  Model,
+  PaginateOptions,
+} from "mongoose";
 import { IPost } from "../../Common/Interfaces";
 import { BaseRepository } from "./base.repository";
+import { PostModel } from "../Models";
 
 export class PostRepository extends BaseRepository<IPost> {
   constructor(protected _postModel: Model<IPost>) {
@@ -19,5 +25,16 @@ export class PostRepository extends BaseRepository<IPost> {
     postId: mongoose.Types.ObjectId
   ): Promise<HydratedDocument<IPost> | null> {
     return await this.findDocumentById(postId);
+  }
+
+  async countDocuments() {
+    return await PostModel.countDocuments();
+  }
+
+  async postsPagination(
+    filters?: FilterQuery<IPost>,
+    options?: PaginateOptions
+  ) {
+    return await PostModel.paginate(filters, options);
   }
 }

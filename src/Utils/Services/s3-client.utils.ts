@@ -43,8 +43,6 @@ export class S3ClientService {
     const keyName = `${this.Key_folder}/${key}/${Date.now()}-${
       file.originalname
     }`;
-    console.log("The Key Name Is ", keyName);
-    console.log("The File Into ", file);
 
     const params: IPutObjectCommandInput = {
       Bucket: process.env.AWS_BUCKET_NAME as string,
@@ -62,6 +60,18 @@ export class S3ClientService {
       key: keyName,
       url: signUrl,
     };
+  }
+
+  async uploadMultipleFilesOnS3(files: Express.Multer.File[], key: string) {
+    const uploadResults = await Promise.all(
+      files.map(async (file) => {
+        // Reuse your existing single-file upload function
+        const result = await this.uploadFileOnS3(file, key);
+        return result;
+      })
+    );
+
+    return uploadResults; // Array of { key, url }
   }
 
   async deleteFileFromS3(key: string) {
@@ -105,7 +115,7 @@ export class S3ClientService {
     });
 
     upload.on("httpUploadProgress", (progress) => {
-      console.log(`Uploaded ${progress.loaded} bytes of ${progress.total}`);
+      // Upload progress tracking
     });
 
     return await upload.done();

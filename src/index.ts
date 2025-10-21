@@ -7,11 +7,21 @@ import { FailedResponse } from "./Utils/Response/response-helper.utils";
 import { syncCommentsCounterJob } from "./Jobs";
 import { ioInitializer } from "./Gateways/socketIo.gateway";
 import cors from "cors";
-
+import morgan from "morgan";
+import fs from "node:fs";
 
 const app = express();
-app.use(cors({ origin: "*", methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"] }));
+app.use(
+  cors({
+    origin: "*",
+    methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  })
+);
 app.use(express.json());
+// Create A Write Stream (in append mode)
+let accessLogStream = fs.createWriteStream("access.log");
+// Setup The Logger
+app.use(morgan("dev", { stream: accessLogStream }));
 
 dbConnection();
 

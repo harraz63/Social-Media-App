@@ -11,7 +11,10 @@ const syncCommentsCounterJob = () => {
       const posts = await PostModel.find();
 
       for (const post of posts) {
-        const count = await CommentModel.countDocuments({ postId: post._id });
+        const count = await CommentModel.countDocuments({ 
+          refId: post._id, 
+          onModel: "Post" 
+        });
         await PostModel.findByIdAndUpdate(post._id, { commentsCounter: count });
       }
 

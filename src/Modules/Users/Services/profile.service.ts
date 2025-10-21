@@ -238,6 +238,7 @@ export class ProfileService {
       user: { _id: userId },
     } = (req as IRequest).loggedInUser;
 
+
     const friends = await this.friendShipRepo.getAllFriendShip(userId);
     if (!friends) {
       return res.json(SuccessResponse("No Friends Found", 200, []));

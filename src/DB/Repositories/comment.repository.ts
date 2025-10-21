@@ -11,7 +11,7 @@ export class CommentRepository extends BaseRepository<IComment> {
   async findCommentsByPostId(
     postId: mongoose.Types.ObjectId
   ): Promise<HydratedDocument<IComment>[]> {
-    return await this.findDocuments({ postId });
+    return await this.findDocuments({ refId: postId, onModel: "Post" });
   }
 
   // Find Comment By Id

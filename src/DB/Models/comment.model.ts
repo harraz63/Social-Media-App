@@ -4,25 +4,25 @@ import { ReactionEnum } from "../../Common/Enums/post.enum";
 
 const commentSchema = new mongoose.Schema<IComment>(
   {
-    postId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Post",
-      required: true,
-    },
     authorId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
       required: true,
     },
-    text: {
-      type: String,
+    refId: {
+      type: mongoose.Schema.Types.ObjectId,
+      refPath: "onModel",
       required: true,
     },
-    parentCommentId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Comment",
-      default: null,
+    onModel: {
+      type: String,
+      enum: ["Post", "Comment"],
+      required: true,
     },
+    text: {
+      type: String,
+    },
+    attachments: [String],
     reactions: [
       {
         userId: {

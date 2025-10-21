@@ -9,12 +9,12 @@ const postsController = express.Router();
 postsController.post(
   "",
   authentication,
-  Multer().single("postMedia"),
-  PostService.createPost
+  Multer().array("postMedia", 4),
+  PostService.addPost
 );
 
 // Get All Posts
-postsController.get("", PostService.getAllPosts);
+postsController.get("/home", authentication, PostService.getAllPosts);
 
 // Get Post By User ID
 postsController.get("/:userId", authentication, PostService.getPostByUserID);

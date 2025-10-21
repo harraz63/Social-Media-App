@@ -1,10 +1,11 @@
 import mongoose from "mongoose";
 import { ReactionEnum } from "../Enums/post.enum";
 export interface IComment {
-  postId: mongoose.Types.ObjectId;
   authorId: mongoose.Types.ObjectId;
-  text: string;
-  parentCommentId?: mongoose.Types.ObjectId | null;
+  refId: mongoose.Types.ObjectId;
+  onModel: "Post" | "Comment";
+  text?: string;
+  attachments?: string[];
   reactions: {
     userId: mongoose.Types.ObjectId;
     type: ReactionEnum;

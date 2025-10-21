@@ -1,14 +1,19 @@
 // post.model.ts
-import mongoose from "mongoose";
+import mongoose, { PaginateModel } from "mongoose";
 import { IPost } from "../../Common/Interfaces/post.interface";
 import { ReactionEnum } from "../../Common/Enums/post.enum";
+import mongoosePaginate from "mongoose-paginate-v2";
 
 const postSchema = new mongoose.Schema<IPost>(
   {
-    authorId: { type: mongoose.Schema.Types.ObjectId, required: true },
-    text: { type: String, required: true },
+    authorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      required: true,
+      ref: "User",
+    },
+    text: { type: String },
     mediaUrl: { type: String },
-    mediaKey: { type: String },
+    mediaKey: [{ type: String }],
     reactions: [
       {
         userId: {
@@ -23,11 +28,26 @@ const postSchema = new mongoose.Schema<IPost>(
         },
       },
     ],
+    allowComments: {
+      type: Boolean,
+      default: true,
+    },
     commentsCounter: { type: Number, default: 0 },
     reactionCounter: { type: Number, default: 0 },
+    tags: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: "User",
+      },
+    ],
   },
   { timestamps: true }
 );
 
-const PostModel = mongoose.model<IPost>("Post", postSchema);
+postSchema.plugin(mongoosePaginate);
+
+const PostModel = mongoose.model<IPost, PaginateModel<IPost>>(
+  "Post",
+  postSchema
+);
 export { PostModel };
