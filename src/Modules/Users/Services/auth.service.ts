@@ -327,7 +327,7 @@ class AuthService {
     );
   };
 
-  // Forget Password
+  // Forget Password  
   forgetPassword = async (req: Request, res: Response) => {
     const { email } = req.body;
 

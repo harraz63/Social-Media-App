@@ -12,6 +12,7 @@ export interface IComment {
   }[];
   repliesCounter: number;
   reactionCounter: number;
+  isFrozen?: boolean;
   createdAt?: Date;
   updatedAt?: Date;
 }

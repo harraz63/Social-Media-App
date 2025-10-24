@@ -14,4 +14,5 @@ export interface IPost {
     type: "like" | "love" | "haha" | "wow" | "sad" | "angry";
   }[];
   tags?: mongoose.Types.ObjectId[];
+  isFrozen?: boolean;
 }

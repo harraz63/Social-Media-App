@@ -40,6 +40,10 @@ const postSchema = new mongoose.Schema<IPost>(
         ref: "User",
       },
     ],
+    isFrozen: {
+      type: Boolean,
+      default: false
+    }
   },
   { timestamps: true }
 );

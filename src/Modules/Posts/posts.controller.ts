@@ -1,7 +1,6 @@
 import express from "express";
 import { authentication, Multer } from "../../Middlewares";
 import PostService from "./Services/posts.service";
-import postsService from "./Services/posts.service";
 
 const postsController = express.Router();
 
@@ -21,6 +20,13 @@ postsController.get("/:userId", authentication, PostService.getPostByUserID);
 
 // Update Own Post
 postsController.put("/:postId", authentication, PostService.updateOwnPost);
+
+// Toggle Freeze Own Post
+postsController.put(
+  "/:postId/freeze",
+  authentication,
+  PostService.toggleFreezePost
+);
 
 // Delete Own Post
 postsController.delete("/:postId", authentication, PostService.deleteOwnPost);

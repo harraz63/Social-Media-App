@@ -39,6 +39,7 @@ const commentSchema = new mongoose.Schema<IComment>(
     ],
     repliesCounter: { type: Number, default: 0 },
     reactionCounter: { type: Number, default: 0 },
+    isFrozen: { type: Boolean, default: false },
   },
   {
     timestamps: true,

@@ -21,6 +21,13 @@ commentsController.put(
   CommentsService.updateComment
 );
 
+// Toggle Freeze Comment
+commentsController.put(
+  "/:commentId/freeze",
+  authentication,
+  CommentsService.toggleFreezeComment
+);
+
 // Delete Comment
 commentsController.delete(
   "/:commentId",

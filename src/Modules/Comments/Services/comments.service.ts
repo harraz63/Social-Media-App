@@ -7,12 +7,32 @@ import {
   ForbiddenException,
   NotFoundException,
 } from "../../../Utils/Errors/exceptions.utils";
-import mongoose from "mongoose";
+import mongoose, { Types } from "mongoose";
 import { SuccessResponse } from "../../../Utils/Response/response-helper.utils";
 import { PostModel } from "../../../DB/Models";
+import { PostRepository } from "../../../DB/Repositories";
 
 class CommentsService {
   private commentRepo = new CommentRepository(CommentModel);
+  private postRepo: PostRepository = new PostRepository(PostModel);
+
+  private deleteCommentsRecursively = async (
+    refId: mongoose.Types.ObjectId,
+    onModel: "Post" | "Comment"
+  ) => {
+    // Find all comments for this reference
+    const comments = await this.commentRepo.findDocuments({ onModel, refId });
+
+    if (!comments || comments.length === 0) return;
+
+    // Delete replies for each comment recursively
+    for (const comment of comments) {
+      await this.deleteCommentsRecursively(comment._id, "Comment");
+    }
+
+    // Delete the comments at this level
+    await this.commentRepo.deleteMultipleDocuments({ onModel, refId });
+  };
 
   addComment = async (req: Request, res: Response) => {
     const { text } = req.body;
@@ -20,10 +40,19 @@ class CommentsService {
       user: { _id: userId },
     } = (req as unknown as IRequest).loggedInUser;
     const { postId } = req.params;
-    // Start Session
 
     if (!text) throw new BadRequestException("Please Enter Comment Text");
     if (!postId) throw new BadRequestException("Please Enter Post Id");
+
+    const post = await this.postRepo.findPostById(
+      postId as unknown as Types.ObjectId
+    );
+    if (!post) throw new NotFoundException("Post Not Found");
+
+    // Check If This Post Is Frozen
+    if (post.isFrozen) {
+      throw new ForbiddenException("You Cannot Comment On Frozen Post");
+    }
 
     // Create Commnet In DB
     const comment = await this.commentRepo.createNewDocument({
@@ -34,7 +63,9 @@ class CommentsService {
     });
 
     // Increase Comments Counter By 1
-    await PostModel.findByIdAndUpdate(postId, { $inc: { commentsCounter: 1 } });
+    post.commentsCounter += 1;
+
+    await post.save();
 
     res.json(
       SuccessResponse("Your Comment Is Created Successfully", 201, comment)
@@ -81,6 +112,36 @@ class CommentsService {
     res.json(SuccessResponse("Comment Updated Successfully", 200, comment));
   };
 
+  toggleFreezeComment = async (req: Request, res: Response) => {
+    const {
+      user: { _id: userId },
+    } = (req as IRequest).loggedInUser;
+    const { commentId } = req.params;
+
+    const comment = await this.commentRepo.findCommentById(
+      commentId as unknown as mongoose.Types.ObjectId
+    );
+    if (!comment) throw new NotFoundException("Comment Not Found");
+
+    // Check That The Comment Belongs To The Logged In User
+    if (userId.toString() !== comment.authorId.toString()) {
+      throw new ForbiddenException(
+        "You Are Not Allowed To Modify This Comment"
+      );
+    }
+
+    comment.isFrozen = !comment.isFrozen;
+    await comment.save();
+
+    const message = comment.isFrozen
+      ? "Comment Frozen Successfully"
+      : "Comment Unfrozen Successfully";
+
+    return res.json(
+      SuccessResponse(message, 200, { isFrozen: comment.isFrozen })
+    );
+  };
+
   deleteComment = async (req: Request, res: Response) => {
     const { commentId } = req.params;
     const {
@@ -99,13 +160,23 @@ class CommentsService {
       );
     }
 
-    // Delete The Comment From DB
+    // Delete all replies recursively
+    await this.deleteCommentsRecursively(comment._id, "Comment");
+
+    // Delete the comment
     await comment.deleteOne();
 
-    // Decrease Commnets Counter By One
-    await PostModel.findByIdAndUpdate(comment.refId, {
-      $inc: { commentsCounter: -1 },
-    });
+    // Update parent's comment counter if this is a reply
+    if (comment.onModel === "Comment") {
+      await CommentModel.findByIdAndUpdate(comment.refId, {
+        $inc: { repliesCounter: -1 },
+      });
+    } else {
+      // Update post's comment counter if this is a top-level comment
+      await PostModel.findByIdAndUpdate(comment.refId, {
+        $inc: { commentsCounter: -1 },
+      });
+    }
 
     res.json(SuccessResponse("Comment Deleted Successfully", 200));
   };

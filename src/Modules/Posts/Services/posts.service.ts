@@ -1,4 +1,4 @@
-import { PostModel, UserModel } from "../../../DB/Models";
+import { CommentModel, PostModel, UserModel } from "../../../DB/Models";
 import { PostRepository } from "../../../DB/Repositories/post.repository";
 import { S3ClientService } from "../../../Utils";
 
@@ -11,15 +11,38 @@ import {
 import { IPost, IRequest } from "../../../Common/Interfaces";
 import { SuccessResponse } from "../../../Utils/Response/response-helper.utils";
 import mongoose, { Types } from "mongoose";
-import { FriendShipRepository, UserRepository } from "../../../DB/Repositories";
+import {
+  CommentRepository,
+  FriendShipRepository,
+  UserRepository,
+} from "../../../DB/Repositories";
 import { FriendShipStatusEnum } from "../../../Common/Enums";
 import { pagination } from "../../../Utils/Pagination/pagination.utils";
 
 export class PostService {
   private userRepo = new UserRepository(UserModel);
   private friendShipRepo = new FriendShipRepository();
+  private commentRepo = new CommentRepository(CommentModel);
   private postRepo = new PostRepository(PostModel);
   private s3Client = new S3ClientService();
+
+  private deleteCommentsRecursively = async (
+    refId: any,
+    onModel: "Post" | "Comment"
+  ) => {
+    // Find all comments for this reference
+    const comments = await this.commentRepo.findDocuments({ onModel, refId });
+
+    if (comments.length === 0) return;
+
+    // Delete replies for each comment recursively
+    for (const comment of comments) {
+      await this.deleteCommentsRecursively(comment._id, "Comment");
+    }
+
+    // Delete the comments at this level
+    await this.commentRepo.deleteMultipleDocuments({ onModel, refId });
+  };
 
   // createPost = async (req: Request, res: Response) => {
   //   const { text } = req.body;
@@ -204,19 +227,52 @@ export class PostService {
     const post = await this.postRepo.findPostById(
       postId as unknown as mongoose.Types.ObjectId
     );
+
     if (!post) {
       throw new NotFoundException("Post Not Found");
     }
+
     // Check If The Post Belongs To Current User
-    if (post?.authorId.toString() !== currentUser._id.toString()) {
+    if (post.authorId.toString() !== currentUser._id.toString()) {
       throw new ForbiddenException(
         "You Are Not Allowed To Access This Resource"
       );
     }
 
+    // Delete all comments and nested replies recursively
+    await this.deleteCommentsRecursively(postId, "Post");
+
+    // Delete the post
     await post.deleteOne();
 
     res.json(SuccessResponse("Post Deleted Successfully", 200));
+  };
+
+  // Toggle Freeze Post
+  toggleFreezePost = async (req: Request, res: Response) => {
+    const {
+      user: { _id: userId },
+    } = (req as IRequest).loggedInUser;
+    const { postId } = req.params;
+
+    const post = await this.postRepo.findPostById(
+      postId as unknown as Types.ObjectId
+    );
+    if (!post) throw new NotFoundException("Post Not Found");
+
+    // Check That The Post Belongs To The Logged In User
+    if (userId.toString() !== post.authorId.toString()) {
+      throw new ForbiddenException("You Are Not Allowed To Modify This Post");
+    }
+
+    post.isFrozen = !post.isFrozen;
+    await post.save();
+
+    const message = post.isFrozen
+      ? "Post Frozen Successfully"
+      : "Post Unfrozen Successfully";
+
+    return res.json(SuccessResponse(message, 200));
   };
 }
 

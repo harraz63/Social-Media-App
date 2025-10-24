@@ -5,6 +5,7 @@ import { CommentRepository, PostRepository } from "../../../DB/Repositories";
 import { Request, Response } from "express";
 import {
   BadRequestException,
+  ForbiddenException,
   NotFoundException,
 } from "../../../Utils/Errors/exceptions.utils";
 import mongoose from "mongoose";
@@ -30,6 +31,11 @@ class ReactsService {
       postId as unknown as mongoose.Types.ObjectId
     );
     if (!post) throw new NotFoundException("Post Not Found");
+
+    // Check If The Post Is Frozen
+    if (post.isFrozen) {
+      throw new ForbiddenException("You Cannot React On Frozen Post")
+    }
 
     // Check If User Already Reacted
     const existingReaction = post.reactions?.find(
