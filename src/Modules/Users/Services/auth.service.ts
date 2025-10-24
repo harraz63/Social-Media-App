@@ -16,6 +16,10 @@ import { v4 as uuidv4 } from "uuid";
 import { BlackListedTokenRepository } from "../../../DB/Repositories";
 import { SuccessResponse } from "../../../Utils/Response/response-helper.utils";
 import { OtpModel } from "../../../DB/Models/otp.model";
+import {
+  BadRequestException,
+  NotFoundException,
+} from "../../../Utils/Errors/exceptions.utils";
 
 const uniqueString = customAlphabet("0123456789", 5);
 
@@ -321,6 +325,89 @@ class AuthService {
         refreshToken: newRefreshToken,
       })
     );
+  };
+
+  // Forget Password
+  forgetPassword = async (req: Request, res: Response) => {
+    const { email } = req.body;
+
+    const user = await this.userRepo.findUserByEmail(email);
+    if (!user) throw new NotFoundException("User Not Found");
+
+    // Generate OTP
+    const otp = uniqueString();
+    emmiter.emit("sendEmail", {
+      to: email,
+      subject: "Reset Your Password - OTP Verification",
+      content: `
+  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: auto; padding: 20px; border: 1px solid #eaeaea; border-radius: 10px; background-color: #fafafa;">
+    <h2 style="text-align: center; color: #FF9800;">🔑 Password Reset Request</h2>
+    <p style="font-size: 16px; color: #333;">
+      Hello <b>${user.firstName}</b>,
+    </p>
+    <p style="font-size: 15px; color: #333;">
+      We received a request to reset your password. Please use the following OTP to verify your identity and reset your password:
+    </p>
+    
+    <div style="text-align: center; margin: 20px 0;">
+      <span style="display: inline-block; background: #FF9800; color: white; font-size: 24px; font-weight: bold; letter-spacing: 4px; padding: 12px 24px; border-radius: 8px;">
+        ${otp}
+      </span>
+    </div>
+
+    <p style="font-size: 14px; color: #555;">
+      ⚠️ This OTP will expire in <b>10 minutes</b>. Do not share it with anyone.
+    </p>
+
+    <p style="font-size: 14px; color: #777;">
+      If you did not request a password reset, you can safely ignore this email — your account will remain secure.
+    </p>
+
+    <hr style="margin: 20px 0; border: none; border-top: 1px solid #eee;" />
+    <p style="text-align: center; font-size: 12px; color: #aaa;">
+      © ${new Date().getFullYear()} Social Media App. All rights reserved.
+    </p>
+  </div>
+  `,
+    });
+
+    // Store Hashed OTP In DB
+    const resetPasswordOtp: IOTP = {
+      userId: user._id,
+      otpType: OtpTypesEnum.FORGOT_PASSWORD,
+      value: generateHash(otp),
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+    };
+    await OtpModel.create(resetPasswordOtp);
+
+    return res.json(
+      SuccessResponse("Reset Password OTP Send Successfully To Your Email", 200)
+    );
+  };
+
+  // Reset Password
+  resetPassword = async (req: Request, res: Response) => {
+    const { otp, email, newPassword } = req.body;
+
+    const user = await this.userRepo.findUserByEmail(email);
+    if (!user) throw new NotFoundException("User Not Found");
+    const userOtps = await OtpModel.findOne({ userId: user._id });
+
+    // Compare OTPs
+    const isOtpMatches = compareHash(otp, userOtps?.value!);
+    if (!isOtpMatches) throw new BadRequestException("Invalid OTP");
+    // Delete Reset Password OTPs For This User
+    await OtpModel.deleteMany({
+      userId: user._id,
+      otpType: OtpTypesEnum.FORGOT_PASSWORD,
+    });
+
+    // Replace Old Pass With New Pass
+    const hashedPassword = generateHash(newPassword);
+    user.password = hashedPassword;
+    await user.save();
+
+    return res.json(SuccessResponse("User Password Changed Successfully", 200));
   };
 }
 

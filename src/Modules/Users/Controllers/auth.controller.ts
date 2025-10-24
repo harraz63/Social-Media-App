@@ -33,4 +33,10 @@ authController.post(
   AuthService.refreshToken
 );
 
+// Forget Password 
+authController.post("/forget-password", AuthService.forgetPassword);
+
+// Reset Password
+authController.post("/reset-password", AuthService.resetPassword);
+
 export { authController };
