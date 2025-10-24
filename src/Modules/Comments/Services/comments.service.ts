@@ -1,4 +1,4 @@
-import { IRequest } from "../../../Common/Interfaces";
+import { IRequest, IComment } from "../../../Common/Interfaces";
 import { CommentModel } from "../../../DB/Models/comment.model";
 import { CommentRepository } from "../../../DB/Repositories/comment.repository";
 import { Request, Response } from "express";
@@ -27,7 +27,10 @@ class CommentsService {
 
     // Delete replies for each comment recursively
     for (const comment of comments) {
-      await this.deleteCommentsRecursively(comment._id, "Comment");
+      await this.deleteCommentsRecursively(
+        comment._id as mongoose.Types.ObjectId,
+        "Comment"
+      );
     }
 
     // Delete the comments at this level
@@ -82,18 +85,132 @@ class CommentsService {
     );
   };
 
+  addReply = async (req: Request, res: Response) => {
+    const { text } = req.body;
+    const {
+      user: { _id: userId },
+    } = (req as unknown as IRequest).loggedInUser;
+    const { commentId } = req.params;
+
+    if (!text) throw new BadRequestException("Please Enter Comment Text");
+    if (!commentId) throw new BadRequestException("Please Enter Comment Id");
+
+    const comment = await this.commentRepo.findCommentById(
+      commentId as unknown as mongoose.Types.ObjectId
+    );
+    if (!comment) throw new NotFoundException("Comment Not Found");
+
+    // Check Block Relationship Between The Two Users
+    const isBlocked = await BlockModel.findOne({
+      $or: [
+        { blockerId: userId, blockedId: comment.authorId },
+        { blockerId: comment.authorId, blockedId: userId },
+      ],
+    });
+    if (isBlocked)
+      throw new ForbiddenException("You Cannot Interact With This User");
+
+    // Check If This Comment Is Frozen
+    if (comment.isFrozen) {
+      throw new ForbiddenException("You Cannot Comment On Frozen Comment");
+    }
+
+    // Create Reply In DB
+    const reply = await this.commentRepo.createNewDocument({
+      authorId: userId,
+      refId: commentId as unknown as mongoose.Types.ObjectId,
+      onModel: "Comment",
+      text: text,
+    });
+
+    // Increase Replies Counter By 1
+    comment.repliesCounter += 1;
+
+    await comment.save();
+
+    res.json(SuccessResponse("Your Reply Is Created Successfully", 201, reply));
+  };
+
   getCommentsForPost = async (req: Request, res: Response) => {
     const { postId } = req.params;
     if (!postId) throw new BadRequestException("Post ID Is Required");
 
     const comments = await this.commentRepo.findCommentsByPostId(
       postId as unknown as mongoose.Types.ObjectId
-    );
+    )
 
     if (comments.length === 0)
       throw new NotFoundException("No Comments Found For This Post");
 
     res.json(SuccessResponse("Comments Fetched Successfully", 200, comments));
+  };
+
+  getCommentWithReplies = async (req: Request, res: Response) => {
+    const { commentId } = req.params;
+    if (!commentId) {
+      throw new BadRequestException("Comment ID is required");
+    }
+
+    // Get the main comment
+    const comment = await this.commentRepo.findDocumentById(
+      commentId as unknown as Types.ObjectId
+    );
+    if (!comment) throw new NotFoundException("Comment Not Found");
+
+    // Populate author info for the main comment
+    await comment.populate("authorId", "firstName lastName profilePicture");
+
+    // Convert to plain object to avoid modifying the mongoose document
+    const commentObj = comment.toObject() as IComment & {
+      replies?: IComment[];
+    };
+
+    // Get all replies recursively
+    const getReplies = async (
+      parentId: mongoose.Types.ObjectId
+    ): Promise<IComment[]> => {
+      const replies = await this.commentRepo.findDocuments({
+        refId: parentId,
+        onModel: "Comment",
+      });
+
+      if (!replies || replies.length === 0) return [];
+
+      // Populate author info for each reply
+      await Promise.all(
+        replies.map((reply) =>
+          reply.populate("authorId", "firstName lastName profilePicture")
+        )
+      );
+
+      // Get nested replies for each reply
+      const repliesWithNested = await Promise.all(
+        replies.map(async (reply) => {
+          const replyObj = reply.toObject() as IComment & {
+            replies?: IComment[];
+          };
+          replyObj.replies = await getReplies(
+            reply._id as unknown as mongoose.Types.ObjectId
+          );
+          return replyObj;
+        })
+      );
+
+      return repliesWithNested;
+    };
+
+    // Add replies to the main comment
+    commentObj.replies = await getReplies(
+      comment._id as unknown as mongoose.Types.ObjectId
+    );
+
+    res.json(
+      SuccessResponse(
+        "Comment with replies fetched successfully",
+        200,
+        commentObj
+      )
+    );
   };
 
   updateComment = async (req: Request, res: Response) => {
@@ -171,7 +288,10 @@ class CommentsService {
     }
 
     // Delete all replies recursively
-    await this.deleteCommentsRecursively(comment._id, "Comment");
+    await this.deleteCommentsRecursively(
+      comment._id as mongoose.Types.ObjectId,
+      "Comment"
+    );
 
     // Delete the comment
     await comment.deleteOne();
