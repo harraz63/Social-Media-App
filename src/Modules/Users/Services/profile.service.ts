@@ -18,7 +18,7 @@ import {
   FriendShipRepository,
   UserRepository,
 } from "../../../DB/Repositories";
-import { ConversationModel, UserModel } from "../../../DB/Models";
+import { BlockModel, ConversationModel, UserModel } from "../../../DB/Models";
 import { FriendShipStatusEnum } from "../../../Common/Enums";
 
 import { FilterQuery, Types } from "mongoose";
@@ -237,7 +237,6 @@ export class ProfileService {
     const {
       user: { _id: userId },
     } = (req as IRequest).loggedInUser;
-
 
     const friends = await this.friendShipRepo.getAllFriendShip(userId);
     if (!friends) {
@@ -578,6 +577,58 @@ export class ProfileService {
     });
 
     return res.json(SuccessResponse("Group Created Successfully", 201, group));
+  };
+
+  // Block User
+  blockUser = async (req: Request, res: Response) => {
+    const {
+      user: { _id: userId },
+    } = (req as IRequest).loggedInUser;
+    const { blockedUserId } = req.body;
+
+    if (!blockedUserId)
+      throw new BadRequestException("Please Provide A User To Block");
+
+    // Check If User Block Himself
+    if (userId.toString() === blockedUserId.toString()) {
+      throw new BadRequestException("You Cannot Block Yourself");
+    }
+
+    // Check About The Blocled User Is A Real User
+    const blockedUser = await this.userRepo.findDocumentById(blockedUserId);
+    if (!blockedUser) throw new BadRequestException("User Not Found");
+
+    // Check If Blocked User Is Already Blocked
+    const isUserBlocked = await BlockModel.findOne({
+      blockerId: userId,
+      blockedId: blockedUserId,
+    });
+    if (isUserBlocked) throw new BadRequestException("User Already Blocked");
+
+    await BlockModel.create({
+      blockerId: userId,
+      blockedId: blockedUserId,
+    });
+
+    return res.json(SuccessResponse("User Blocked Successfully", 200));
+  };
+
+  // Unblock User
+  unblockUser = async (req: Request, res: Response) => {
+    const {
+      user: { _id: userId },
+    } = (req as IRequest).loggedInUser;
+    const { unblockedUserId } = req.body;
+
+    if (!unblockedUserId)
+      throw new BadRequestException("Please Provide A User To Unblock");
+
+    await BlockModel.deleteOne({
+      blockerId: userId,
+      blockedId: unblockedUserId,
+    });
+
+    return res.json(SuccessResponse("User Unblocked Successfully", 200));
   };
 }
 

@@ -9,7 +9,7 @@ import {
 } from "../../../Utils/Errors/exceptions.utils";
 import mongoose, { Types } from "mongoose";
 import { SuccessResponse } from "../../../Utils/Response/response-helper.utils";
-import { PostModel } from "../../../DB/Models";
+import { BlockModel, PostModel } from "../../../DB/Models";
 import { PostRepository } from "../../../DB/Repositories";
 
 class CommentsService {
@@ -48,6 +48,16 @@ class CommentsService {
       postId as unknown as Types.ObjectId
     );
     if (!post) throw new NotFoundException("Post Not Found");
+
+    // Check Block Relationship Between The Two Users
+    const isBlocked = await BlockModel.findOne({
+      $or: [
+        { blockerId: userId, blockedId: post.authorId },
+        { blockerId: post.authorId, blockedId: userId },
+      ],
+    });
+    if (isBlocked)
+      throw new ForbiddenException("You Cannot Interact With This User");
 
     // Check If This Post Is Frozen
     if (post.isFrozen) {

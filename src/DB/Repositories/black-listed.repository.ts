@@ -7,10 +7,4 @@ export class BlackListedTokenRepository extends BaseRepository<IBlackListedToken
   constructor(protected _blackListedTokenModel: Model<IBlackListedToken>) {
     super(BlackListedTokenModel);
   }
-
-
-  
-
-
-
 }

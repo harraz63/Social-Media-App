@@ -1,6 +1,6 @@
 import { ReactionEnum } from "../../../Common/Enums/post.enum";
 import { IRequest } from "../../../Common/Interfaces";
-import { CommentModel, PostModel } from "../../../DB/Models";
+import { BlockModel, CommentModel, PostModel } from "../../../DB/Models";
 import { CommentRepository, PostRepository } from "../../../DB/Repositories";
 import { Request, Response } from "express";
 import {
@@ -32,9 +32,19 @@ class ReactsService {
     );
     if (!post) throw new NotFoundException("Post Not Found");
 
+    // Check Block Relationship Between The Two Users
+    const isBlocked = await BlockModel.findOne({
+      $or: [
+        { blockerId: userId, blockedId: post.authorId },
+        { blockerId: post.authorId, blockedId: userId },
+      ],
+    });
+    if (isBlocked)
+      throw new ForbiddenException("You Cannot Interact With This User");
+
     // Check If The Post Is Frozen
     if (post.isFrozen) {
-      throw new ForbiddenException("You Cannot React On Frozen Post")
+      throw new ForbiddenException("You Cannot React On Frozen Post");
     }
 
     // Check If User Already Reacted
@@ -97,6 +107,16 @@ class ReactsService {
       commentId as unknown as mongoose.Types.ObjectId
     );
     if (!comment) throw new NotFoundException("Comment Not Found");
+
+    // Check Block Relationship Between The Two Users
+    const isBlocked = await BlockModel.findOne({
+      $or: [
+        { blockerId: userId, blockedId: comment.authorId },
+        { blockerId: comment.authorId, blockedId: userId },
+      ],
+    });
+    if (isBlocked)
+      throw new ForbiddenException("You Cannot Interact With This User");
 
     // Check If User Already Reacted On This Post
     const existingReaction = comment.reactions?.find(

@@ -107,4 +107,20 @@ profileController.post(
   profileService.createGroup
 );
 
+// Block User
+profileController.post(
+  "/:blockedUserId/block",
+  authentication,
+  profileService.blockUser
+);
+
+// Unblock User
+profileController.post(
+  "/:blockedUserId/unblock",
+  authentication,
+  profileService.unblockUser
+);
+
+
+
 export { profileController };
