@@ -2,7 +2,6 @@ import express from "express";
 import AuthService from "../Services/auth.service";
 import {
   authentication,
-  validationMiddleware,
   verifyRefreshToken,
 } from "../../../Middlewares";
 // import { signupSchema } from "../../../Validators";

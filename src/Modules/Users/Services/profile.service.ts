@@ -14,11 +14,19 @@ import {
 import { IFriendShip, IRequest, IUser } from "../../../Common/Interfaces";
 import { SuccessResponse } from "../../../Utils/Response/response-helper.utils";
 import {
+  CommentRepository,
   ConversationRepository,
   FriendShipRepository,
+  PostRepository,
   UserRepository,
 } from "../../../DB/Repositories";
-import { BlockModel, ConversationModel, UserModel } from "../../../DB/Models";
+import {
+  BlockModel,
+  CommentModel,
+  ConversationModel,
+  PostModel,
+  UserModel,
+} from "../../../DB/Models";
 import { FriendShipStatusEnum } from "../../../Common/Enums";
 
 import { FilterQuery, Types } from "mongoose";
@@ -33,6 +41,8 @@ export class ProfileService {
   private userRepo = new UserRepository(UserModel);
   private friendShipRepo = new FriendShipRepository();
   private conversationRepo = new ConversationRepository(ConversationModel);
+  private postRepo = new PostRepository(PostModel);
+  private commentRepo = new CommentRepository(CommentModel);
 
   uploadProfilePicture = async (req: Request, res: Response) => {
     const { file } = req;
@@ -102,6 +112,7 @@ export class ProfileService {
     );
   };
 
+  // Delete Account
   deleteAccount = async (req: Request, res: Response) => {
     const { user } = (req as unknown as IRequest).loggedInUser;
 
@@ -129,6 +140,13 @@ export class ProfileService {
 
     // Delete User Document
     await this.userRepo.deleteByIdDocument(user._id);
+
+    // Delete Related Posts, Comments, And Friend Ships
+    await this.postRepo.deleteMultipleDocuments({ authorId: user._id });
+    await this.commentRepo.deleteMultipleDocuments({ authorId: user._id });
+    await this.friendShipRepo.deleteMultipleDocuments({
+      $or: [{ requestFromId: user._id }, { requestToId: user._id }],
+    });
 
     res.json(
       SuccessResponse<unknown>("Account Deleted Successfully", 200, {
