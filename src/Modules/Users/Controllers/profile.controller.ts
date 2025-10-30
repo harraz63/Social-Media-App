@@ -66,6 +66,21 @@ profileController.get(
   profileService.listRequests
 );
 
+// Unfrind Friend
+profileController.delete(
+  "/delete-friend",
+  authentication,
+  profileService.deleteFriend
+);
+
+// Delete Friend Request
+profileController.delete(
+  "/delete-friend-request",
+  authentication,
+  profileService.deleteFriendRequest
+);
+
+
 // Response Friend Request
 profileController.patch(
   "/respond-to-friend-request",
@@ -120,7 +135,5 @@ profileController.post(
   authentication,
   profileService.unblockUser
 );
-
-
 
 export { profileController };

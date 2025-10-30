@@ -630,6 +630,59 @@ export class ProfileService {
 
     return res.json(SuccessResponse("User Unblocked Successfully", 200));
   };
+
+  // Delete Friend
+  deleteFriend = async (req: Request, res: Response) => {
+    const {
+      user: { _id: userId },
+    } = (req as IRequest).loggedInUser;
+    const { friendId } = req.body;
+
+    // Check If User Delete Himself
+    if (userId.toString() === friendId.toString())
+      throw new BadRequestException("You Cannot Unfriend Yourself");
+
+    // Delete The Friend Ship Between This Users
+    const deletedFriendShip = await this.friendShipRepo.deleteOneDocument({
+      status: FriendShipStatusEnum.ACCEPTED,
+      $or: [
+        { requestFromId: userId, requestToId: friendId },
+        { requestFromId: friendId, requestToId: userId },
+      ],
+    });
+    if (deletedFriendShip.deletedCount === 0)
+      throw new NotFoundException("Friend Relationship Not Found");
+
+    return res.json(
+      SuccessResponse("Friend Relationship Deleted Successfully")
+    );
+  };
+
+  // Delete Friend Request
+  deleteFriendRequest = async (req: Request, res: Response) => {
+    const {
+      user: { _id: userId },
+    } = (req as IRequest).loggedInUser;
+    const { friendId } = req.body;
+
+    // Check If User Delete Himself
+    if (userId.toString() === friendId.toString()) {
+      throw new BadRequestException(
+        "You Cannot Delete Your Own Friend Request"
+      );
+    }
+
+    const deletedFriendRequest = await this.friendShipRepo.deleteOneDocument({
+      status: FriendShipStatusEnum.PENDING,
+      requestFromId: userId,
+      requestToId: friendId,
+    });
+    if (deletedFriendRequest.deletedCount === 0) {
+      throw new NotFoundException("Friend Request Not Found");
+    }
+
+    return res.json(SuccessResponse("Friend Request Deleted Successfully"));
+  };
 }
 
 export default new ProfileService();
