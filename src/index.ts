@@ -9,6 +9,7 @@ import { ioInitializer } from "./Gateways/socketIo.gateway";
 import cors from "cors";
 import morgan from "morgan";
 import fs from "node:fs";
+import { loggingMiddleware } from "./Middlewares";
 
 const app = express();
 app.use(
@@ -18,6 +19,8 @@ app.use(
   })
 );
 app.use(express.json());
+// Colorized request logging
+app.use(loggingMiddleware);
 // Create A Write Stream (in append mode)
 let accessLogStream = fs.createWriteStream("access.log");
 // Setup The Logger
@@ -28,6 +31,7 @@ dbConnection();
 // Run cron jobs
 syncCommentsCounterJob();
 
+// Routes
 app.use("/api/auth", controllers.authController);
 app.use("/api/users", controllers.profileController);
 app.use("/api/admin", controllers.adminController);
@@ -60,7 +64,9 @@ app.use(
   }
 );
 
+// Server
 const port: number | string = process.env.PORT || 3000;
 const server = app.listen(port);
 
+// Socket IO
 ioInitializer(server);

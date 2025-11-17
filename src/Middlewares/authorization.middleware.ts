@@ -1,7 +1,8 @@
 import { RoleEnum } from "../Common/Enums";
-import { NextFunction, Request, Response } from "express";
 import { IRequest } from "../Common/Interfaces";
+import { NextFunction, Request, Response } from "express";
 
+// Authorization Middleware
 export const authorizationMiddleware = (allowedRoles: RoleEnum[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const {

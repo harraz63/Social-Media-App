@@ -1,4 +1,3 @@
-import { Request, Response } from "express";
 import { PostRepository, UserRepository } from "../../../DB/Repositories";
 import { PostModel, UserModel } from "../../../DB/Models";
 import {
@@ -7,6 +6,8 @@ import {
 } from "../../../Utils/Errors/exceptions.utils";
 import { SuccessResponse } from "../../../Utils/Response/response-helper.utils";
 import { RoleEnum } from "../../../Common/Enums";
+import { Request, Response } from "express";
+
 
 class AdminService {
   private userRepo = new UserRepository(UserModel);
@@ -18,6 +19,7 @@ class AdminService {
     if (!users || users.length === 0)
       throw new NotFoundException("No Users Found");
 
+    // make safe users object for remove sensitive data
     const safeUsers = users.map((user) => {
       return {
         firstName: user.firstName,
@@ -36,6 +38,7 @@ class AdminService {
   // Delete User
   deleteUser = async (req: Request, res: Response) => {
     const { id: userId } = req.params;
+
     const user = await this.userRepo.findDocumentById(userId);
     if (!user) throw new NotFoundException("User Not Found");
 
@@ -58,14 +61,12 @@ class AdminService {
     return res.json(SuccessResponse("Posts Fetched Successfully", 200, posts));
   };
 
-  //   Remove Inappropriate Post
+  // Remove Inappropriate Post
   removePost = async (req: Request, res: Response) => {
     const { id: postId } = req.params;
-    const post = await this.postRepo.findDocumentById(postId);
-    if (!post) throw new NotFoundException("Post Not Found");
 
-    // Delete The Post
-    await this.postRepo.deleteByIdDocument(postId);
+    const deletedPost = await this.postRepo.deleteByIdDocument(postId);
+    if (!deletedPost) throw new NotFoundException("Post Not Found");
 
     return res.json(SuccessResponse("Post Deleted Successfully", 200));
   };

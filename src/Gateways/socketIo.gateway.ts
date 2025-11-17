@@ -7,6 +7,7 @@ import { ChatInitiation } from "../Modules/Chat/chat";
 export const connectedSockets = new Map<string, string[]>(); // Key: userId, Value: socketIds
 let io: Server | null = null;
 
+// Socket Authentication
 async function socketAuthentication(socket: Socket, next: Function) {
   const token = socket.handshake.auth.authorization;
   const decodedData = verifyToken(
@@ -42,6 +43,7 @@ async function socketAuthentication(socket: Socket, next: Function) {
   next();
 }
 
+// Socket Disconnection
 function socketDisconnection(socket: Socket) {
   socket.on("disconnect", () => {
     const userId = socket.data.userId;
@@ -56,6 +58,7 @@ function socketDisconnection(socket: Socket) {
   });
 }
 
+// Socket Initializer
 export const ioInitializer = (server: httpServer) => {
   io = new Server(server, { cors: { origin: "*" } });
 
@@ -67,6 +70,7 @@ export const ioInitializer = (server: httpServer) => {
   });
 };
 
+// Get Socket IO Instance
 export const getIo = () => {
   try {
     if (!io) throw new Error("Socket.io not initialized");

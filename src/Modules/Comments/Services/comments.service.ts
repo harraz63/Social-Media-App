@@ -37,6 +37,7 @@ class CommentsService {
     await this.commentRepo.deleteMultipleDocuments({ onModel, refId });
   };
 
+  // Add Comment
   addComment = async (req: Request, res: Response) => {
     const { text } = req.body;
     const {
@@ -44,9 +45,11 @@ class CommentsService {
     } = (req as unknown as IRequest).loggedInUser;
     const { postId } = req.params;
 
+    // Validate Input
     if (!text) throw new BadRequestException("Please Enter Comment Text");
     if (!postId) throw new BadRequestException("Please Enter Post Id");
 
+    // Find Post
     const post = await this.postRepo.findPostById(
       postId as unknown as Types.ObjectId
     );
@@ -85,6 +88,7 @@ class CommentsService {
     );
   };
 
+  // Add Reply
   addReply = async (req: Request, res: Response) => {
     const { text } = req.body;
     const {
@@ -92,9 +96,11 @@ class CommentsService {
     } = (req as unknown as IRequest).loggedInUser;
     const { commentId } = req.params;
 
+    // Validate Input
     if (!text) throw new BadRequestException("Please Enter Comment Text");
     if (!commentId) throw new BadRequestException("Please Enter Comment Id");
 
+    // Find Comment
     const comment = await this.commentRepo.findCommentById(
       commentId as unknown as mongoose.Types.ObjectId
     );
@@ -131,13 +137,14 @@ class CommentsService {
     res.json(SuccessResponse("Your Reply Is Created Successfully", 201, reply));
   };
 
+  // Get Comments For Post
   getCommentsForPost = async (req: Request, res: Response) => {
     const { postId } = req.params;
     if (!postId) throw new BadRequestException("Post ID Is Required");
 
     const comments = await this.commentRepo.findCommentsByPostId(
       postId as unknown as mongoose.Types.ObjectId
-    )
+    );
 
     if (comments.length === 0)
       throw new NotFoundException("No Comments Found For This Post");
@@ -145,6 +152,7 @@ class CommentsService {
     res.json(SuccessResponse("Comments Fetched Successfully", 200, comments));
   };
 
+  // Get Comment With Replies
   getCommentWithReplies = async (req: Request, res: Response) => {
     const { commentId } = req.params;
     if (!commentId) {
@@ -153,12 +161,11 @@ class CommentsService {
 
     // Get the main comment
     const comment = await this.commentRepo.findDocumentById(
-      commentId as unknown as Types.ObjectId
+      commentId as unknown as Types.ObjectId,
+      {},
+      { populate: "authorId firstName lastName profilePicture" }
     );
     if (!comment) throw new NotFoundException("Comment Not Found");
-
-    // Populate author info for the main comment
-    await comment.populate("authorId", "firstName lastName profilePicture");
 
     // Convert to plain object to avoid modifying the mongoose document
     const commentObj = comment.toObject() as IComment & {
@@ -213,6 +220,7 @@ class CommentsService {
     );
   };
 
+  // Update Comment
   updateComment = async (req: Request, res: Response) => {
     const { commentId } = req.params;
     const { text } = req?.body;
@@ -239,12 +247,14 @@ class CommentsService {
     res.json(SuccessResponse("Comment Updated Successfully", 200, comment));
   };
 
+  // Toggle Freeze Comment
   toggleFreezeComment = async (req: Request, res: Response) => {
     const {
       user: { _id: userId },
     } = (req as IRequest).loggedInUser;
     const { commentId } = req.params;
 
+    // Find Comment
     const comment = await this.commentRepo.findCommentById(
       commentId as unknown as mongoose.Types.ObjectId
     );
@@ -257,6 +267,7 @@ class CommentsService {
       );
     }
 
+    // Toggle Freeze
     comment.isFrozen = !comment.isFrozen;
     await comment.save();
 
@@ -269,12 +280,14 @@ class CommentsService {
     );
   };
 
+  // Delete Comment
   deleteComment = async (req: Request, res: Response) => {
     const { commentId } = req.params;
     const {
       user: { _id: userId },
     } = (req as unknown as IRequest).loggedInUser;
 
+    // Find Comment
     const comment = await this.commentRepo.findCommentById(
       commentId as unknown as mongoose.Types.ObjectId
     );
