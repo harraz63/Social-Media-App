@@ -1,7 +1,7 @@
 import { EventEmitter } from "events";
-import nodemailer from "nodemailer";
 import { IEmailArgument } from "../../Common/Interfaces";
 import { Attachment } from "nodemailer/lib/mailer";
+import nodemailer from "nodemailer";
 
 export const sendEmail = async ({
   to,

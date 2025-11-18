@@ -7,4 +7,9 @@ export class BlackListedTokenRepository extends BaseRepository<IBlackListedToken
   constructor(protected _blackListedTokenModel: Model<IBlackListedToken>) {
     super(BlackListedTokenModel);
   }
+
+  // Create Many Documents
+  createManyDocuments = async (documents: Partial<IBlackListedToken>[]) => {
+    return await this._blackListedTokenModel.create(documents);
+  };
 }

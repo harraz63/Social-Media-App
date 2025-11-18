@@ -1,8 +1,9 @@
 // post.model.ts
-import mongoose, { PaginateModel } from "mongoose";
 import { IPost } from "../../Common/Interfaces/post.interface";
 import { ReactionEnum } from "../../Common/Enums/post.enum";
 import mongoosePaginate from "mongoose-paginate-v2";
+import mongoose, { PaginateModel } from "mongoose";
+
 
 const postSchema = new mongoose.Schema<IPost>(
   {

@@ -1,4 +1,3 @@
-import { NextFunction, Request, Response } from "express";
 import { IOTP, IRequest, IUser } from "../../../Common/Interfaces";
 import { UserRepository } from "../../../DB/Repositories/user.repository";
 import { BlackListedTokenModel, UserModel } from "../../../DB/Models";
@@ -9,10 +8,7 @@ import {
   generateHash,
   generateToken,
 } from "../../../Utils";
-import { customAlphabet } from "nanoid";
 import { OtpTypesEnum } from "../../../Common/Enums";
-import { SignOptions } from "jsonwebtoken";
-import { v4 as uuidv4 } from "uuid";
 import { BlackListedTokenRepository } from "../../../DB/Repositories";
 import { SuccessResponse } from "../../../Utils/Response/response-helper.utils";
 import { OtpModel } from "../../../DB/Models/otp.model";
@@ -20,6 +16,10 @@ import {
   BadRequestException,
   NotFoundException,
 } from "../../../Utils/Errors/exceptions.utils";
+import { NextFunction, Request, Response } from "express";
+import { customAlphabet } from "nanoid";
+import { SignOptions } from "jsonwebtoken";
+import { v4 as uuidv4 } from "uuid";
 
 const uniqueString = customAlphabet("0123456789", 5);
 
@@ -28,6 +28,7 @@ class AuthService {
   private blackListedRepo: BlackListedTokenRepository =
     new BlackListedTokenRepository(BlackListedTokenModel);
 
+  // Sign Up
   signup = async (req: Request, res: Response, next: NextFunction) => {
     const {
       firstName,
@@ -122,23 +123,40 @@ class AuthService {
   `,
     });
 
+    // Create Confermition Email OTP In DB
     const confermitionEmailOtp: IOTP = {
       userId: newUser._id,
       value: generateHash(otp),
       otpType: OtpTypesEnum.EMAIL_VERIFICATION,
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes Expiry
     };
     await OtpModel.create(confermitionEmailOtp);
+
+    // Safe User Data
+    const safeUser = {
+      _id: newUser._id,
+      firstName: newUser.firstName,
+      lastName: newUser.lastName,
+      email: newUser.email,
+      gender: newUser.gender,
+      age: newUser.age,
+    };
 
     return res
       .status(201)
       .json(
-        SuccessResponse<IUser>("User Signed Up Successfully", 201, newUser)
+        SuccessResponse<Partial<IUser>>(
+          "User Signed Up Successfully",
+          201,
+          safeUser
+        )
       );
   };
 
+  // Sign In
   signin = async (req: Request, res: Response, next: NextFunction) => {
     const { email, password }: Partial<IUser> = req.body;
+    // Email Validation
     if (!email) {
       return res
         .status(400)
@@ -201,9 +219,11 @@ class AuthService {
     });
   };
 
+  // Confirm Email
   confirmEmail = async (req: Request, res: Response, next: NextFunction) => {
     const { email, otp } = req.body;
 
+    // Email And OTP Validation
     if (!email || !otp) {
       return res
         .status(400)
@@ -223,7 +243,6 @@ class AuthService {
       userId: user._id,
       otpType: OtpTypesEnum.EMAIL_VERIFICATION,
     }).sort({ createdAt: -1 });
-
     if (!otpDoc) {
       return res.status(400).json({ success: false, message: "No OTP found" });
     }
@@ -234,7 +253,7 @@ class AuthService {
     }
 
     // Compare the provided OTP with the stored hashed OTP
-    const isOtpMatches = await compareHash(otp, otpDoc.value);
+    const isOtpMatches = compareHash(otp, otpDoc.value);
     if (!isOtpMatches) {
       return res.status(400).json({ success: false, message: "Invalid OTP" });
     }
@@ -254,36 +273,39 @@ class AuthService {
       .json({ success: true, message: "Account Confirmed Successfully" });
   };
 
+  // Logout
   logout = async (req: Request, res: Response, next: NextFunction) => {
+    // Get The Logged In User Data
     const {
       token: { jti: accessTokenId, exp: accessTokenExp },
     } = (req as IRequest).loggedInUser;
-
+    // Get The Refresh Token Data
     const { jti: refreshTokenId, exp: refreshTokenExp } = (req as any)
       .refreshToken;
 
-    // Revoke Access Token
-    const blackListedAccessToken = await this.blackListedRepo.createNewDocument(
+    // Create Tokens To BlackList In One Operation
+    const tokenToBlackList = [
       {
         tokenId: accessTokenId,
         expiresAt: new Date(accessTokenExp || Date.now() + 600000),
-      }
-    );
-
-    // Revoke Refresh Token
-    const blackListedRefreshToken =
-      await this.blackListedRepo.createNewDocument({
+      },
+      {
         tokenId: refreshTokenId,
         expiresAt: new Date(refreshTokenExp || Date.now() + 600000),
-      });
+      },
+    ];
+    const blackListedTokens = await this.blackListedRepo.createManyDocuments(
+      tokenToBlackList
+    );
 
     return res.status(200).json({
       success: true,
       message: "User Logged Out Successfully",
-      data: { blackListedAccessToken, blackListedRefreshToken },
+      data: { blackListedTokens },
     });
   };
 
+  // Refresh Token
   refreshToken = async (req: Request, res: Response) => {
     const decodedData = (req as any).refreshToken;
 
@@ -327,7 +349,7 @@ class AuthService {
     );
   };
 
-  // Forget Password  
+  // Forget Password
   forgetPassword = async (req: Request, res: Response) => {
     const { email } = req.body;
 
@@ -376,7 +398,7 @@ class AuthService {
       userId: user._id,
       otpType: OtpTypesEnum.FORGOT_PASSWORD,
       value: generateHash(otp),
-      expiresAt: new Date(Date.now() + 10 * 60 * 1000),
+      expiresAt: new Date(Date.now() + 10 * 60 * 1000), // 10 minutes Expiry
     };
     await OtpModel.create(resetPasswordOtp);
 
@@ -389,6 +411,7 @@ class AuthService {
   resetPassword = async (req: Request, res: Response) => {
     const { otp, email, newPassword } = req.body;
 
+    // Find User By Email
     const user = await this.userRepo.findUserByEmail(email);
     if (!user) throw new NotFoundException("User Not Found");
     const userOtps = await OtpModel.findOne({ userId: user._id });

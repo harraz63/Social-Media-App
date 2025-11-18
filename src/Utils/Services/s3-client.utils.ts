@@ -38,7 +38,7 @@ export class S3ClientService {
 
     return signedUrl;
   }
-
+  
   async uploadFileOnS3(file: Express.Multer.File, key: string) {
     const keyName = `${this.Key_folder}/${key}/${Date.now()}-${
       file.originalname

@@ -1,7 +1,8 @@
-import { Router } from "express";
 import { authentication, authorizationMiddleware } from "../../Middlewares";
 import adminService from "./Services/admin.service";
 import { RoleEnum } from "../../Common/Enums";
+import { Router } from "express";
+
 
 const adminController = Router();
 

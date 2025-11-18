@@ -7,7 +7,7 @@ import {
 import { SuccessResponse } from "../../../Utils/Response/response-helper.utils";
 import { RoleEnum } from "../../../Common/Enums";
 import { Request, Response } from "express";
-
+import { pagination } from "../../../Utils/Pagination/pagination.utils";
 
 class AdminService {
   private userRepo = new UserRepository(UserModel);
@@ -15,7 +15,19 @@ class AdminService {
 
   // Get All Users
   getAllUsers = async (req: Request, res: Response) => {
-    const users = await this.userRepo.findDocuments({});
+    const { limit, page } = req.query;
+
+    // Apply Pagination
+    const { limit: currentLimit } = pagination({
+      limit: Number(limit),
+      page: Number(page),
+    });
+
+    const users = await this.userRepo.findDocuments(
+      {},
+      {},
+      { limit: currentLimit, page: Number(page) }
+    );
     if (!users || users.length === 0)
       throw new NotFoundException("No Users Found");
 
@@ -54,7 +66,19 @@ class AdminService {
 
   // Get All Posts
   getAllPosts = async (req: Request, res: Response) => {
-    const posts = await this.postRepo.findDocuments({});
+    const { limit, page } = req.query;
+
+    // Apply Pagination
+    const { limit: currentLimit } = pagination({
+      limit: Number(limit),
+      page: Number(page),
+    });
+
+    const posts = await this.postRepo.findDocuments(
+      {},
+      {},
+      { limit: currentLimit, page: Number(page) }
+    );
     if (!posts || posts.length === 0)
       throw new NotFoundException("No Posts Found");
 

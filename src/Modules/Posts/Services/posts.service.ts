@@ -1,8 +1,6 @@
 import { CommentModel, PostModel, UserModel } from "../../../DB/Models";
 import { PostRepository } from "../../../DB/Repositories/post.repository";
 import { S3ClientService } from "../../../Utils";
-
-import { Request, Response } from "express";
 import {
   BadRequestException,
   ForbiddenException,
@@ -10,7 +8,6 @@ import {
 } from "../../../Utils/Errors/exceptions.utils";
 import { IPost, IRequest } from "../../../Common/Interfaces";
 import { SuccessResponse } from "../../../Utils/Response/response-helper.utils";
-import mongoose, { Types } from "mongoose";
 import {
   CommentRepository,
   FriendShipRepository,
@@ -18,6 +15,8 @@ import {
 } from "../../../DB/Repositories";
 import { FriendShipStatusEnum } from "../../../Common/Enums";
 import { pagination } from "../../../Utils/Pagination/pagination.utils";
+import { Request, Response } from "express";
+import mongoose, { Types } from "mongoose";
 
 export class PostService {
   private userRepo = new UserRepository(UserModel);
@@ -26,6 +25,7 @@ export class PostService {
   private postRepo = new PostRepository(PostModel);
   private s3Client = new S3ClientService();
 
+  // Recursive Function For Delete Comments
   private deleteCommentsRecursively = async (
     refId: any,
     onModel: "Post" | "Comment"
@@ -44,40 +44,7 @@ export class PostService {
     await this.commentRepo.deleteMultipleDocuments({ onModel, refId });
   };
 
-  // createPost = async (req: Request, res: Response) => {
-  //   const { text } = req.body;
-  //   const media = req.file;
-  //   const {
-  //     user: { _id: userID },
-  //   } = (req as unknown as IRequest).loggedInUser;
-  //   if (!text) throw new BadRequestException("Text Is Required");
-
-  //   // If There Are Media Url Upload It On S3
-  //   let key;
-  //   let url;
-  //   if (media) {
-  //     const uploadResult = await this.s3Client.uploadFileOnS3(
-  //       media,
-  //       `${userID}/post`
-  //     );
-
-  //     key = uploadResult.key;
-  //     url = uploadResult.url;
-  //   }
-
-  //   // Create New Post
-  //   const post = await this.postRepo.createNewDocument({
-  //     authorId: userID,
-  //     text: text,
-  //     mediaUrl: url,
-  //     mediaKey: key,
-  //   });
-
-  //   return res.json(
-  //     SuccessResponse("Post Created Successfully", 201, { post, mediaUrl: url })
-  //   );
-  // };
-
+  // Add Post
   addPost = async (req: Request, res: Response) => {
     const {
       user: { _id: userId },
@@ -114,16 +81,20 @@ export class PostService {
       if (friends.length !== tagsArray.length)
         throw new BadRequestException("Invalid Tags");
 
+      // Usr Set To Avoid Repetation
       uniqueTags = Array.from(new Set(tagsArray));
     }
 
+    // Upload Post Media On S3 If Mrdia
     let attachments: string[] = [];
+    let mediaUrls: string[] = [];
     if (files?.length) {
       const uploadedData = await this.s3Client.uploadMultipleFilesOnS3(
         files,
         `${userId}/posts`
       );
       attachments = uploadedData.map(({ key }) => key);
+      mediaUrls = uploadedData.map(({ url }) => url);
     }
 
     const post = await this.postRepo.createNewDocument({
@@ -134,30 +105,18 @@ export class PostService {
       tags: uniqueTags,
     });
 
-    return res.json(SuccessResponse("Post Added Successfully", 201, { post }));
+    return res.json(SuccessResponse("Post Added Successfully", 201, { post, mediaUrls }));
   };
 
+  // Get All Posts
   getAllPosts = async (req: Request, res: Response) => {
-    const {
-      user: { _id: userId },
-    } = (req as unknown as IRequest).loggedInUser;
     const { page, limit } = req.query;
 
-    const { limit: currentLimit, skip } = pagination({
+    const { limit: currentLimit } = pagination({
       limit: Number(limit),
       page: Number(page),
     });
-
-    // const posts = await this.postRepo.findDocuments(
-    //   {
-    //     authorId: { $ne: userId },
-    //   },
-    //   {},
-    //   { limit: currentLimit, skip }
-    // );
-    // const totalPages = (await this.postRepo.countDocuments()) / Number(limit);
-    // if (posts.length === 0) throw new BadRequestException("No Posts Founded");
-
+    // Fetch Posts With Pagination Logic
     const posts = await this.postRepo.postsPagination(
       {},
       {
@@ -175,11 +134,11 @@ export class PostService {
     res.json(
       SuccessResponse("Posts Is Fetched Successfully", 200, {
         posts,
-        // totalPages,
       })
     );
   };
 
+  // Get Posts By User ID
   getPostByUserID = async (req: Request, res: Response) => {
     const { userId } = req.params;
     const userPosts = await this.postRepo.findPostsByAuthorId(
@@ -193,6 +152,7 @@ export class PostService {
     );
   };
 
+  // Update Post
   updateOwnPost = async (req: Request, res: Response) => {
     const { postId } = req.params;
     const { user: currentUser } = (req as unknown as IRequest).loggedInUser;
@@ -219,6 +179,7 @@ export class PostService {
     res.json(SuccessResponse("Post Updated Successfully", 200, post));
   };
 
+  // Delete Post
   deleteOwnPost = async (req: Request, res: Response) => {
     const { postId } = req.params;
     const { user: currentUser } = (req as unknown as IRequest).loggedInUser;
@@ -265,6 +226,7 @@ export class PostService {
       throw new ForbiddenException("You Are Not Allowed To Modify This Post");
     }
 
+    // Apply Togglization
     post.isFrozen = !post.isFrozen;
     await post.save();
 

@@ -1,4 +1,3 @@
-import { Request, Response } from "express";
 import {
   BadRequestException,
   NotFoundException,
@@ -28,8 +27,8 @@ import {
   UserModel,
 } from "../../../DB/Models";
 import { FriendShipStatusEnum } from "../../../Common/Enums";
-
-import { FilterQuery, Types } from "mongoose";
+import { Request, Response } from "express";
+import { FilterQuery } from "mongoose";
 import { customAlphabet } from "nanoid";
 import { v4 as uuidv4 } from "uuid";
 import { SignOptions } from "jsonwebtoken";
@@ -44,6 +43,7 @@ export class ProfileService {
   private postRepo = new PostRepository(PostModel);
   private commentRepo = new CommentRepository(CommentModel);
 
+  // Upload Profile Picture
   uploadProfilePicture = async (req: Request, res: Response) => {
     const { file } = req;
     const { user } = (req as unknown as IRequest).loggedInUser;
@@ -59,6 +59,7 @@ export class ProfileService {
       `${user._id}/profile`
     );
 
+    // Update User Profile Picture in DB
     user.profilePicture = key;
     await user.save();
 
@@ -70,6 +71,7 @@ export class ProfileService {
     );
   };
 
+  // Upload Cover Picture
   uploadCoverPicture = async (req: Request, res: Response) => {
     const file = req.file;
     const { user } = (req as unknown as IRequest).loggedInUser;
@@ -91,6 +93,7 @@ export class ProfileService {
     );
   };
 
+  // Renew Signed URL
   renewSignedUrl = async (req: Request, res: Response) => {
     const { user } = (req as unknown as IRequest).loggedInUser;
     const {
@@ -112,7 +115,7 @@ export class ProfileService {
     );
   };
 
-  // Delete Account
+  // Delete Account 
   deleteAccount = async (req: Request, res: Response) => {
     const { user } = (req as unknown as IRequest).loggedInUser;
 
@@ -163,6 +166,7 @@ export class ProfileService {
     } = (req as unknown as IRequest).loggedInUser;
     const { friendId } = req.body;
 
+    
     const user = await this.userRepo.findDocumentById(friendId);
     if (!user) throw new BadRequestException("User Not Found");
 
@@ -360,7 +364,7 @@ export class ProfileService {
 
     // Send Otp To Enaple 2FA
     const otp = uniqueString();
-    user.twoFactorAuth.enabled = true;
+    // user.twoFactorAuth.enabled = true;
     user.twoFactorAuth.otp = generateHash(otp);
     user.twoFactorAuth.otpExpiresAt = new Date(Date.now() + 10 * 60 * 1000);
     await user.save();
