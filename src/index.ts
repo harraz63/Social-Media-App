@@ -65,8 +65,23 @@ app.use(
 );
 
 // Server
-const port: number | string = process.env.PORT || 3000;
-const server = app.listen(port);
+const port: number | string = process.env.PORT || 5000;
+const server = app.listen(port, () => {
+  console.log(`Server running on port ${port}`);
+});
 
-// Socket IO
+server.on("error", (err: NodeJS.ErrnoException) => {
+  if (err.code === "EADDRINUSE") {
+    console.log(`Port ${port} is in use, trying 5000...`);
+    // Trying To User 5000 Port Instead 3000 If It Busy
+    const server2 = app.listen(5000, () => {
+      console.log("Server running on port 5000");
+    });
+    ioInitializer(server2);
+  } else {
+    console.log(err);
+  }
+});
+
+// Initialize Socket.IO for the main server if no error
 ioInitializer(server);

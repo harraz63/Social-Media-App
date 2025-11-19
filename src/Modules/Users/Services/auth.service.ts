@@ -36,12 +36,11 @@ class AuthService {
       password,
       email,
       gender,
-      DOB,
       age,
       phoneNumber,
     } = req.body;
 
-    // Check If Email Is Already Exist
+    // Check If Email Is Already Exist in DB
     const isEmailExist = await this.userRepo.findOneDocument(
       { email },
       "email"
@@ -56,26 +55,11 @@ class AuthService {
       });
     }
 
-    // Execute The User Age
-    if (DOB) {
-      const birthDate = new Date(DOB as unknown as string);
-      const today = new Date();
-
-      let userAge = today.getFullYear() - birthDate.getFullYear();
-      const monthDiff = today.getMonth() - birthDate.getMonth();
-      if (
-        monthDiff < 0 ||
-        (monthDiff === 0 && today.getDate() < birthDate.getDate())
-      ) {
-        userAge--; // If the user's birthday hasn't occurred yet this year, subtract 1 from age
-      }
-    }
-
     // Encrypt Phone Number And Hash Password
     const encryptedPhoneNumber = encrypt(phoneNumber as string);
     const hashedPassword = generateHash(password as string);
 
-    // Create New User
+    // Create New User in DB
     const newUser = await this.userRepo.createNewDocument({
       firstName,
       lastName,
