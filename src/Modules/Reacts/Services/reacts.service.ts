@@ -2,19 +2,20 @@ import { ReactionEnum } from "../../../Common/Enums/post.enum";
 import { IRequest } from "../../../Common/Interfaces";
 import { BlockModel, CommentModel, PostModel } from "../../../DB/Models";
 import { CommentRepository, PostRepository } from "../../../DB/Repositories";
-import { Request, Response } from "express";
 import {
   BadRequestException,
   ForbiddenException,
   NotFoundException,
 } from "../../../Utils/Errors/exceptions.utils";
-import mongoose from "mongoose";
 import { SuccessResponse } from "../../../Utils/Response/response-helper.utils";
+import mongoose from "mongoose";
+import { Request, Response } from "express";
 
 class ReactsService {
   private postRepo: PostRepository = new PostRepository(PostModel);
   private commentsRepo: CommentRepository = new CommentRepository(CommentModel);
 
+  // Add React To Post
   addReactToPost = async (req: Request, res: Response) => {
     const { reactionType } = req.body as { reactionType: ReactionEnum };
     const { postId } = req.params;
@@ -91,6 +92,7 @@ class ReactsService {
     );
   };
 
+  // Add React To Comment
   addReactToComment = async (req: Request, res: Response) => {
     const {
       user: { _id: userId },
@@ -161,6 +163,7 @@ class ReactsService {
     );
   };
 
+  // Delete React From Post
   deleteReactFromPost = async (req: Request, res: Response) => {
     const { postId } = req.params;
     const {
@@ -195,6 +198,7 @@ class ReactsService {
     );
   };
 
+  // Delete React From Comment
   deleteReactFromComment = async (req: Request, res: Response) => {
     const { commentId } = req.params;
     const {
@@ -229,6 +233,7 @@ class ReactsService {
     );
   };
 
+  // Get Reacts On Post
   getReactsOnPost = async (req: Request, res: Response) => {
     const { postId } = req.params;
 
@@ -259,7 +264,7 @@ class ReactsService {
       })
     );
   };
-
+  // Get Reacts On Comment
   getReactsOnComment = async (req: Request, res: Response) => {
     const { commentId } = req.params;
 
