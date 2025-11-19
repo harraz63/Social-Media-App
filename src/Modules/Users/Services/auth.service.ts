@@ -20,6 +20,7 @@ import { NextFunction, Request, Response } from "express";
 import { customAlphabet } from "nanoid";
 import { SignOptions } from "jsonwebtoken";
 import { v4 as uuidv4 } from "uuid";
+import { SignupBodyType } from "../../../Common/Types";
 
 const uniqueString = customAlphabet("0123456789", 5);
 
@@ -38,7 +39,7 @@ class AuthService {
       gender,
       age,
       phoneNumber,
-    } = req.body;
+    }: SignupBodyType = req.body;
 
     // Check If Email Is Already Exist in DB
     const isEmailExist = await this.userRepo.findOneDocument(

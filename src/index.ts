@@ -1,15 +1,15 @@
 import "dotenv/config";
-import express, { NextFunction, Request, Response } from "express";
 import * as controllers from "./Modules/controllers.index";
 import dbConnection from "./DB/db.connection";
 import { HttpException } from "./Utils";
 import { FailedResponse } from "./Utils/Response/response-helper.utils";
 import { syncCommentsCounterJob } from "./Jobs";
 import { ioInitializer } from "./Gateways/socketIo.gateway";
-import cors from "cors";
-import morgan from "morgan";
 import fs from "node:fs";
 import { loggingMiddleware } from "./Middlewares";
+import cors from "cors";
+import morgan from "morgan";
+import express, { NextFunction, Request, Response } from "express";
 
 const app = express();
 app.use(
@@ -49,7 +49,7 @@ app.use(
   ) => {
     if (err instanceof HttpException) {
       res.status(err.statusCode).json(
-        FailedResponse(err.message, err.statusCode, {
+        FailedResponse(err.message, err.statusCode, err.error || {
           message: err.message,
         })
       );
@@ -70,18 +70,6 @@ const server = app.listen(port, () => {
   console.log(`Server running on port ${port}`);
 });
 
-server.on("error", (err: NodeJS.ErrnoException) => {
-  if (err.code === "EADDRINUSE") {
-    console.log(`Port ${port} is in use, trying 5000...`);
-    // Trying To User 5000 Port Instead 3000 If It Busy
-    const server2 = app.listen(5000, () => {
-      console.log("Server running on port 5000");
-    });
-    ioInitializer(server2);
-  } else {
-    console.log(err);
-  }
-});
 
 // Initialize Socket.IO for the main server if no error
 ioInitializer(server);

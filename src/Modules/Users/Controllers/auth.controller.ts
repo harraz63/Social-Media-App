@@ -3,19 +3,38 @@ import AuthService from "../Services/auth.service";
 import {
   authentication,
   verifyRefreshToken,
+  validationMiddleware,
 } from "../../../Middlewares";
-// import { signupSchema } from "../../../Validators";
+import {
+  signupSchema,
+  signinSchema,
+  confirmEmailSchema,
+  forgetPasswordSchema,
+  resetPasswordSchema,
+} from "../../../Validators";
 
 const authController = express.Router();
 
 // Signup
-authController.post("/signup", AuthService.signup);
+authController.post(
+  "/signup",
+  validationMiddleware(signupSchema),
+  AuthService.signup
+);
 
 // Confirm Email
-authController.post("/confirm-email", AuthService.confirmEmail);
+authController.post(
+  "/confirm-email",
+  validationMiddleware(confirmEmailSchema),
+  AuthService.confirmEmail
+);
 
 // Signin
-authController.post("/signin", AuthService.signin);
+authController.post(
+  "/signin",
+  validationMiddleware(signinSchema),
+  AuthService.signin
+);
 
 // Logout
 authController.post(
@@ -32,10 +51,18 @@ authController.post(
   AuthService.refreshToken
 );
 
-// Forget Password 
-authController.post("/forget-password", AuthService.forgetPassword);
+// Forget Password
+authController.post(
+  "/forget-password",
+  validationMiddleware(forgetPasswordSchema),
+  AuthService.forgetPassword
+);
 
 // Reset Password
-authController.post("/reset-password", AuthService.resetPassword);
+authController.post(
+  "/reset-password",
+  validationMiddleware(resetPasswordSchema),
+  AuthService.resetPassword
+);
 
 export { authController };
